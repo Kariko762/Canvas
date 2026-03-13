@@ -14,6 +14,7 @@ import {
   type MechanicCategory 
 } from '@/lib/mechanics-registry'
 import { useConfirm } from '@/components/ui/useConfirm'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 
 interface Page {
   id: string
@@ -150,11 +151,7 @@ export default function PageEditorPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <p className="text-zinc-400">Loading...</p>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   if (!page) {

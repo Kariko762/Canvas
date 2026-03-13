@@ -8,6 +8,15 @@ import { Divider } from '@/components/mechanics/Divider'
 import { Spacer } from '@/components/mechanics/Spacer'
 import { Button } from '@/components/mechanics/Button'
 import { FlipCard } from '@/components/mechanics/FlipCard'
+import { StatsCounter } from '@/components/mechanics/StatsCounter'
+import { ProgressBar } from '@/components/mechanics/ProgressBar'
+import { Headline } from '@/components/mechanics/Headline'
+import { ScrollContainer } from '@/components/mechanics/ScrollContainer'
+import { Accordion } from '@/components/mechanics/Accordion'
+import { Tabs } from '@/components/mechanics/Tabs'
+import { GridLayout } from '@/components/mechanics/GridLayout'
+import { Modal } from '@/components/mechanics/Modal'
+import { SplitScreen } from '@/components/mechanics/SplitScreen'
 
 interface MechanicInstance {
   id: string
@@ -54,6 +63,24 @@ export function MechanicRenderer({
         return <Button {...enhancedProps as any} />
       case 'flipcard':
         return <FlipCard {...enhancedProps as any} />
+      case 'statscounter':
+        return <StatsCounter {...enhancedProps as any} />
+      case 'progressbar':
+        return <ProgressBar {...enhancedProps as any} />
+      case 'headline':
+        return <Headline {...enhancedProps as any} />
+      case 'scrollcontainer':
+        return <ScrollContainer {...enhancedProps as any} />
+      case 'accordion':
+        return <Accordion {...enhancedProps as any} />
+      case 'tabs':
+        return <Tabs {...enhancedProps as any} />
+      case 'gridlayout':
+        return <GridLayout {...enhancedProps as any} />
+      case 'modal':
+        return <Modal {...enhancedProps as any} />
+      case 'splitscreen':
+        return <SplitScreen {...enhancedProps as any} />
       default:
         return (
           <div className="p-4 bg-red-900/20 border border-red-800 text-red-400 rounded">

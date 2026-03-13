@@ -29,6 +29,7 @@ export function MechanicsToolbar({ onAddMechanic }: ToolbarProps) {
     { key: 'decoration', label: 'Shapes' },
     { key: 'media', label: 'Media' },
     { key: 'interactive', label: 'Interactive' },
+    { key: 'data', label: 'Data' },
     { key: 'layout', label: 'Layout' },
   ];
 

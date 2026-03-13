@@ -6,6 +6,8 @@ import { ArrowLeft, Plus, Trash2, Settings, Save, GripVertical, Layers, ChevronD
 import Link from 'next/link';
 import { nanoid } from 'nanoid';
 import { useConfirm } from '@/components/ui/useConfirm';
+import { useUnsavedChanges } from '@/components/ui/useUnsavedChanges';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MechanicRenderer } from '@/components/mechanics/MechanicRenderer';
 import { LayerPanel } from '@/components/editor/LayerPanel';
 import { MechanicsToolbar } from '@/components/editor/MechanicsToolbar';
@@ -71,6 +73,7 @@ export default function AssetEditorPage() {
   const [error, setError] = useState('');
   
   const { confirm, ConfirmDialog } = useConfirm();
+  const { prompt: promptUnsaved, UnsavedChangesDialog: UnsavedDialog } = useUnsavedChanges();
 
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>('asset');
@@ -314,16 +317,21 @@ export default function AssetEditorPage() {
   const handleSelectPage = async (page: Page) => {
     // Check for unsaved changes
     if (mechanicsChanged && selectedPage) {
-      const confirmed = await confirm({
-        title: 'Unsaved Changes',
-        description: 'You have unsaved changes. Do you want to save before switching pages?',
-        confirmText: 'Save & Switch',
-        cancelText: 'Discard Changes',
-        variant: 'warning',
-      });
+      const action = await promptUnsaved();
 
-      if (confirmed) {
+      if (action === 'save') {
+        // Save and stay on current page
         await handleSaveMechanics();
+        return;
+      } else if (action === 'saveAndContinue') {
+        // Save and continue to new page
+        await handleSaveMechanics();
+      } else if (action === 'discard') {
+        // Discard changes and continue
+        setMechanicsChanged(false);
+      } else if (action === 'cancel') {
+        // Stay on current page
+        return;
       }
     }
 
@@ -620,11 +628,7 @@ export default function AssetEditorPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <p className="text-zinc-400">Loading...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!asset) {
@@ -745,9 +749,14 @@ export default function AssetEditorPage() {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">{page.title}</div>
-                        <div className="text-xs text-zinc-500">/{page.slug}</div>
+                      <div className="flex-1 flex items-center gap-2">
+                        <div>
+                          <div className="font-medium text-sm">{page.title}</div>
+                          <div className="text-xs text-zinc-500">/{page.slug}</div>
+                        </div>
+                        {selectedPage?.id === page.id && mechanicsChanged && (
+                          <span className="w-2 h-2 bg-yellow-500 rounded-full flex-shrink-0" title="Unsaved changes" />
+                        )}
                       </div>
                       {selectedPage?.id === page.id && (
                         <button
@@ -1019,114 +1028,117 @@ export default function AssetEditorPage() {
         ) : (
           /* Asset Properties */
           <div className="flex-1 overflow-y-auto p-6">
-            <div className="max-w-2xl">
+            <div className="max-w-3xl">
                 <h2 className="text-lg font-semibold mb-6">Asset Properties</h2>
                 
                 <div className="space-y-6">
-                  {/* Title */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Title</label>
-                    <input
-                      type="text"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
-                    />
+                  {/* 2-Column Grid for Title and Slug */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Title</label>
+                      <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Slug</label>
+                      <input
+                        type="text"
+                        value={slug}
+                        onChange={(e) => setSlug(e.target.value)}
+                        className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                      />
+                    </div>
                   </div>
 
-                  {/* Slug */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Slug</label>
-                    <input
-                      type="text"
-                      value={slug}
-                      onChange={(e) => setSlug(e.target.value)}
-                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
-                    />
-                  </div>
-
-                  {/* Description */}
+                  {/* Description - Full Width */}
                   <div>
                     <label className="block text-sm font-medium mb-2">Description</label>
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      rows={3}
+                      rows={2}
                       className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
                     />
                   </div>
 
-                  {/* Status */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Status</label>
-                    <select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value as any)}
-                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
-                    >
-                      <option value="draft">Draft</option>
-                      <option value="published">Published</option>
-                      <option value="archived">Archived</option>
-                    </select>
+                  {/* Status - Single Column */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Status</label>
+                      <select
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value as any)}
+                        className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                        <option value="archived">Archived</option>
+                      </select>
+                    </div>
                   </div>
 
                   {/* Canvas Colors */}
                   <div className="border-t border-zinc-800 pt-6">
                     <h3 className="text-sm font-medium mb-4">Canvas Colors</h3>
                     
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm mb-2">Background Color</label>
+                        <label className="block text-sm mb-2">Background</label>
                         <div className="flex gap-2">
                           <input
                             type="color"
                             value={canvasBackgroundColor}
                             onChange={(e) => setCanvasBackgroundColor(e.target.value)}
-                            className="w-12 h-10 rounded cursor-pointer"
+                            className="w-10 h-10 rounded cursor-pointer"
                           />
                           <input
                             type="text"
                             value={canvasBackgroundColor}
                             onChange={(e) => setCanvasBackgroundColor(e.target.value)}
-                            className="flex-1 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                            className="flex-1 px-2 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white text-sm font-mono"
                           />
                         </div>
                         {!isValidHexColor(canvasBackgroundColor) && (
-                          <p className="text-xs text-red-400 mt-1">Invalid hex color</p>
+                          <p className="text-xs text-red-400 mt-1">Invalid hex</p>
                         )}
                       </div>
 
                       <div>
-                        <label className="block text-sm mb-2">Text Color</label>
+                        <label className="block text-sm mb-2">Text</label>
                         <div className="flex gap-2">
                           <input
                             type="color"
                             value={canvasTextColor}
                             onChange={(e) => setCanvasTextColor(e.target.value)}
-                            className="w-12 h-10 rounded cursor-pointer"
+                            className="w-10 h-10 rounded cursor-pointer"
                           />
                           <input
                             type="text"
                             value={canvasTextColor}
                             onChange={(e) => setCanvasTextColor(e.target.value)}
-                            className="flex-1 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                            className="flex-1 px-2 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white text-sm font-mono"
                           />
                         </div>
                         {!isValidHexColor(canvasTextColor) && (
-                          <p className="text-xs text-red-400 mt-1">Invalid hex color</p>
+                          <p className="text-xs text-red-400 mt-1">Invalid hex</p>
                         )}
                       </div>
                     </div>
 
-                    {/* Color Preview */}
+                    {/* Compact Color Preview */}
                     <div 
-                      className="w-full h-24 rounded border border-zinc-800 flex items-center justify-center"
+                      className="w-full h-16 rounded border border-zinc-800 flex items-center justify-center mt-4"
                       style={{ 
                         backgroundColor: isValidHexColor(canvasBackgroundColor) ? canvasBackgroundColor : '#ffffff',
                         color: isValidHexColor(canvasTextColor) ? canvasTextColor : '#000000'
                       }}
                     >
-                      <span className="font-medium">Preview Text</span>
+                      <span className="font-medium">Preview</span>
                     </div>
                   </div>
                 </div>
@@ -1145,11 +1157,16 @@ export default function AssetEditorPage() {
                 selectedMechanicId={selectedMechanicId}
                 onSelectMechanic={(id) => setSelectedMechanicId(id)}
                 onDeleteMechanic={async (id) => {
-                  const mech = mechanics.find(m => m.id === id);
+ const mech = mechanics.find(m => m.id === id);
                   if (!mech) return;
                   
                   const mechName = getMechanic(mech.type)?.name || 'mechanic';
-                  const confirmed = await confirm(`Delete ${mechName}?`, 'This cannot be undone.');
+                  const confirmed = await confirm({
+                    title: `Delete ${mechName}?`,
+                    description: 'This action cannot be undone.',
+                    confirmText: 'Delete',
+                    variant: 'danger'
+                  });
                   if (confirmed) {
                     const newMechanics = mechanics.filter(m => m.id !== id);
                     setMechanics(newMechanics);
@@ -1419,6 +1436,207 @@ export default function AssetEditorPage() {
                         )}
                       </div>
                     ))}
+
+                    {/* Custom Array Editors for Complex Components */}
+                    {selectedMechanic.type === 'tabs' && (
+                      <div className="pt-4 mt-4 border-t border-zinc-800">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wide">Tab Items</h3>
+                          <button
+                            onClick={() => {
+                              const currentTabs = selectedMechanic.props.tabs || [];
+                              handleMechanicPropChange('tabs', [
+                                ...currentTabs,
+                                { id: nanoid(), label: `Tab ${currentTabs.length + 1}`, content: 'Content here' }
+                              ]);
+                            }}
+                            className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded"
+                          >
+                            + Add Tab
+                          </button>
+                        </div>
+                        <div className="space-y-3">
+                          {(selectedMechanic.props.tabs || []).map((tab: any, index: number) => (
+                            <div key={tab.id} className="p-3 bg-zinc-800 rounded border border-zinc-700">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs text-zinc-400">Tab {index + 1}</span>
+                                <button
+                                  onClick={() => {
+                                    const currentTabs = [...(selectedMechanic.props.tabs || [])];
+                                    currentTabs.splice(index, 1);
+                                    handleMechanicPropChange('tabs', currentTabs);
+                                  }}
+                                  className="text-red-500 hover:text-red-400 text-xs"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                              <input
+                                type="text"
+                                value={tab.label}
+                                onChange={(e) => {
+                                  const currentTabs = [...(selectedMechanic.props.tabs || [])];
+                                  currentTabs[index] = { ...tab, label: e.target.value };
+                                  handleMechanicPropChange('tabs', currentTabs);
+                                }}
+                                placeholder="Tab label"
+                                className="w-full mb-2 px-2 py-1 bg-zinc-900 border border-zinc-700 rounded text-sm"
+                              />
+                              <textarea
+                                value={tab.content}
+                                onChange={(e) => {
+                                  const currentTabs = [...(selectedMechanic.props.tabs || [])];
+                                  currentTabs[index] = { ...tab, content: e.target.value };
+                                  handleMechanicPropChange('tabs', currentTabs);
+                                }}
+                                placeholder="Tab content"
+                                rows={3}
+                                className="w-full px-2 py-1 bg-zinc-900 border border-zinc-700 rounded text-sm"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedMechanic.type === 'accordion' && (
+                      <div className="pt-4 mt-4 border-t border-zinc-800">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wide">Accordion Items</h3>
+                          <button
+                            onClick={() => {
+                              const currentItems = selectedMechanic.props.items || [];
+                              handleMechanicPropChange('items', [
+                                ...currentItems,
+                                { id: nanoid(), title: `Section ${currentItems.length + 1}`, content: 'Content here' }
+                              ]);
+                            }}
+                            className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded"
+                          >
+                            + Add Section
+                          </button>
+                        </div>
+                        <div className="space-y-3">
+                          {(selectedMechanic.props.items || []).map((item: any, index: number) => (
+                            <div key={item.id} className="p-3 bg-zinc-800 rounded border border-zinc-700">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs text-zinc-400">Section {index + 1}</span>
+                                <button
+                                  onClick={() => {
+                                    const currentItems = [...(selectedMechanic.props.items || [])];
+                                    currentItems.splice(index, 1);
+                                    handleMechanicPropChange('items', currentItems);
+                                  }}
+                                  className="text-red-500 hover:text-red-400 text-xs"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                              <input
+                                type="text"
+                                value={item.title}
+                                onChange={(e) => {
+                                  const currentItems = [...(selectedMechanic.props.items || [])];
+                                  currentItems[index] = { ...item, title: e.target.value };
+                                  handleMechanicPropChange('items', currentItems);
+                                }}
+                                placeholder="Section title"
+                                className="w-full mb-2 px-2 py-1 bg-zinc-900 border border-zinc-700 rounded text-sm"
+                              />
+                              <textarea
+                                value={item.content}
+                                onChange={(e) => {
+                                  const currentItems = [...(selectedMechanic.props.items || [])];
+                                  currentItems[index] = { ...item, content: e.target.value };
+                                  handleMechanicPropChange('items', currentItems);
+                                }}
+                                placeholder="Section content"
+                                rows={3}
+                                className="w-full px-2 py-1 bg-zinc-900 border border-zinc-700 rounded text-sm"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedMechanic.type === 'gridlayout' && (
+                      <div className="pt-4 mt-4 border-t border-zinc-800">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wide">Grid Items</h3>
+                          <button
+                            onClick={() => {
+                              const currentItems = selectedMechanic.props.items || [];
+                              handleMechanicPropChange('items', [
+                                ...currentItems,
+                                { id: nanoid(), content: `Item ${currentItems.length + 1}`, backgroundColor: '#f3f4f6', textColor: '#1f2937' }
+                              ]);
+                            }}
+                            className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded"
+                          >
+                            + Add Item
+                          </button>
+                        </div>
+                        <div className="space-y-3">
+                          {(selectedMechanic.props.items || []).map((item: any, index: number) => (
+                            <div key={item.id} className="p-3 bg-zinc-800 rounded border border-zinc-700">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs text-zinc-400">Item {index + 1}</span>
+                                <button
+                                  onClick={() => {
+                                    const currentItems = [...(selectedMechanic.props.items || [])];
+                                    currentItems.splice(index, 1);
+                                    handleMechanicPropChange('items', currentItems);
+                                  }}
+                                  className="text-red-500 hover:text-red-400 text-xs"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                              <textarea
+                                value={item.content}
+                                onChange={(e) => {
+                                  const currentItems = [...(selectedMechanic.props.items || [])];
+                                  currentItems[index] = { ...item, content: e.target.value };
+                                  handleMechanicPropChange('items', currentItems);
+                                }}
+                                placeholder="Item content"
+                                rows={2}
+                                className="w-full mb-2 px-2 py-1 bg-zinc-900 border border-zinc-700 rounded text-sm"
+                              />
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-xs text-zinc-500">Background</label>
+                                  <input
+                                    type="color"
+                                    value={item.backgroundColor || '#f3f4f6'}
+                                    onChange={(e) => {
+                                      const currentItems = [...(selectedMechanic.props.items || [])];
+                                      currentItems[index] = { ...item, backgroundColor: e.target.value };
+                                      handleMechanicPropChange('items', currentItems);
+                                    }}
+                                    className="w-full h-8 rounded cursor-pointer"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-zinc-500">Text Color</label>
+                                  <input
+                                    type="color"
+                                    value={item.textColor || '#1f2937'}
+                                    onChange={(e) => {
+                                      const currentItems = [...(selectedMechanic.props.items || [])];
+                                      currentItems[index] = { ...item, textColor: e.target.value };
+                                      handleMechanicPropChange('items', currentItems);
+                                    }}
+                                    className="w-full h-8 rounded cursor-pointer"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                         </>
                       );
                   })()}
@@ -1431,7 +1649,8 @@ export default function AssetEditorPage() {
         ) : null}
       </div>
 
-      {ConfirmDialog}
+      <ConfirmDialog />
+      <UnsavedDialog />
     </div>
   );
 }
