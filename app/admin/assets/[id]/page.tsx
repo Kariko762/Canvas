@@ -42,6 +42,15 @@ interface Page {
   transition_type?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down';
   transition_duration?: number;
   canvas_background_color?: string;
+  background_type?: 'colour' | 'gradient' | 'image' | 'animated-image';
+  background_gradient_type?: 'linear' | 'radial';
+  background_gradient_colors?: string;
+  background_gradient_angle?: number;
+  background_image_url?: string;
+  background_image_size?: 'cover' | 'contain' | 'auto';
+  background_image_position?: string;
+  background_animation_type?: 'ken-burns' | 'parallax' | 'pulse';
+  background_animation_duration?: number;
   mechanics: string | null;
   created_at: string;
   updated_at: string;
@@ -94,6 +103,15 @@ export default function AssetEditorPage() {
   const [pageTransitionType, setPageTransitionType] = useState<'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down'>('fade');
   const [pageTransitionDuration, setPageTransitionDuration] = useState(300);
   const [pageBackgroundColor, setPageBackgroundColor] = useState('');
+  const [pageBackgroundType, setPageBackgroundType] = useState<'colour' | 'gradient' | 'image' | 'animated-image'>('colour');
+  const [pageBackgroundGradientType, setPageBackgroundGradientType] = useState<'linear' | 'radial'>('linear');
+  const [pageBackgroundGradientColors, setPageBackgroundGradientColors] = useState('#000000,#ffffff');
+  const [pageBackgroundGradientAngle, setPageBackgroundGradientAngle] = useState(180);
+  const [pageBackgroundImageUrl, setPageBackgroundImageUrl] = useState('');
+  const [pageBackgroundImageSize, setPageBackgroundImageSize] = useState<'cover' | 'contain' | 'auto'>('cover');
+  const [pageBackgroundImagePosition, setPageBackgroundImagePosition] = useState('center');
+  const [pageBackgroundAnimationType, setPageBackgroundAnimationType] = useState<'ken-burns' | 'parallax' | 'pulse'>('ken-burns');
+  const [pageBackgroundAnimationDuration, setPageBackgroundAnimationDuration] = useState(10);
   const [savingPage, setSavingPage] = useState(false);
 
   // Mechanics editor state
@@ -343,6 +361,15 @@ export default function AssetEditorPage() {
     setPageTransitionType(page.transition_type || 'fade');
     setPageTransitionDuration(page.transition_duration || 300);
     setPageBackgroundColor(page.canvas_background_color || '');
+    setPageBackgroundType(page.background_type || 'colour');
+    setPageBackgroundGradientType(page.background_gradient_type || 'linear');
+    setPageBackgroundGradientColors(page.background_gradient_colors || '#000000,#ffffff');
+    setPageBackgroundGradientAngle(page.background_gradient_angle || 180);
+    setPageBackgroundImageUrl(page.background_image_url || '');
+    setPageBackgroundImageSize(page.background_image_size || 'cover');
+    setPageBackgroundImagePosition(page.background_image_position || 'center');
+    setPageBackgroundAnimationType(page.background_animation_type || 'ken-burns');
+    setPageBackgroundAnimationDuration(page.background_animation_duration || 10);
     
     // Load mechanics
     if (page.mechanics) {
@@ -423,6 +450,15 @@ export default function AssetEditorPage() {
           transition_type: pageTransitionType,
           transition_duration: pageTransitionDuration,
           canvas_background_color: pageBackgroundColor || null,
+          background_type: pageBackgroundType,
+          background_gradient_type: pageBackgroundGradientType,
+          background_gradient_colors: pageBackgroundGradientColors,
+          background_gradient_angle: pageBackgroundGradientAngle,
+          background_image_url: pageBackgroundImageUrl || null,
+          background_image_size: pageBackgroundImageSize,
+          background_image_position: pageBackgroundImagePosition,
+          background_animation_type: pageBackgroundAnimationType,
+          background_animation_duration: pageBackgroundAnimationDuration,
         }),
       });
 
@@ -982,26 +1018,241 @@ export default function AssetEditorPage() {
                     </div>
                   </div>
 
-                  {/* Page Background Color (optional override) */}
+                  {/* Page Background Configuration */}
                   <div className="border-t border-zinc-800 pt-6">
                     <h3 className="text-sm font-medium mb-4">Page Background</h3>
-                    <p className="text-xs text-zinc-500 mb-3">Override asset background for this page (optional)</p>
+                    <p className="text-xs text-zinc-500 mb-3">Configure background appearance for this page</p>
                     
-                    <div className="flex gap-2">
-                      <input
-                        type="color"
-                        value={pageBackgroundColor || canvasBackgroundColor}
-                        onChange={(e) => setPageBackgroundColor(e.target.value)}
-                        className="w-12 h-10 rounded cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={pageBackgroundColor}
-                        onChange={(e) => setPageBackgroundColor(e.target.value)}
-                        placeholder="Leave empty to use asset default"
-                        className="flex-1 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
-                      />
+                    {/* Background Type Dropdown */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-2">Background Type</label>
+                      <select
+                        value={pageBackgroundType}
+                        onChange={(e) => setPageBackgroundType(e.target.value as any)}
+                        className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                      >
+                        <option value="colour">Solid Colour</option>
+                        <option value="gradient">Gradient</option>
+                        <option value="image">Image</option>
+                        <option value="animated-image">Animated Image</option>
+                      </select>
                     </div>
+
+                    {/* Colour Configuration */}
+                    {pageBackgroundType === 'colour' && (
+                      <div className="space-y-3">
+                        <label className="block text-sm font-medium">Color</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="color"
+                            value={pageBackgroundColor || canvasBackgroundColor}
+                            onChange={(e) => setPageBackgroundColor(e.target.value)}
+                            className="w-12 h-10 rounded cursor-pointer"
+                          />
+                          <input
+                            type="text"
+                            value={pageBackgroundColor}
+                            onChange={(e) => setPageBackgroundColor(e.target.value)}
+                            placeholder="Leave empty to use asset default"
+                            className="flex-1 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Gradient Configuration */}
+                    {pageBackgroundType === 'gradient' && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Gradient Type</label>
+                          <select
+                            value={pageBackgroundGradientType}
+                            onChange={(e) => setPageBackgroundGradientType(e.target.value as any)}
+                            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                          >
+                            <option value="linear">Linear</option>
+                            <option value="radial">Radial</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Colors (comma-separated hex)</label>
+                          <input
+                            type="text"
+                            value={pageBackgroundGradientColors}
+                            onChange={(e) => setPageBackgroundGradientColors(e.target.value)}
+                            placeholder="#000000,#ffffff"
+                            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white font-mono text-sm"
+                          />
+                          <p className="text-xs text-zinc-500 mt-1">Example: #ff0000,#00ff00,#0000ff</p>
+                        </div>
+
+                        {pageBackgroundGradientType === 'linear' && (
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Angle (degrees)</label>
+                            <input
+                              type="number"
+                              value={pageBackgroundGradientAngle}
+                              onChange={(e) => setPageBackgroundGradientAngle(Number(e.target.value))}
+                              min="0"
+                              max="360"
+                              step="15"
+                              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                            />
+                            <p className="text-xs text-zinc-500 mt-1">0° = top to bottom, 90° = left to right</p>
+                          </div>
+                        )}
+
+                        {/* Gradient Preview */}
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Preview</label>
+                          <div 
+                            className="w-full h-20 rounded border border-zinc-700"
+                            style={{
+                              background: pageBackgroundGradientType === 'linear'
+                                ? `linear-gradient(${pageBackgroundGradientAngle}deg, ${pageBackgroundGradientColors.split(',').join(', ')})`
+                                : `radial-gradient(circle, ${pageBackgroundGradientColors.split(',').join(', ')})`
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Image Configuration */}
+                    {pageBackgroundType === 'image' && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Image URL</label>
+                          <input
+                            type="text"
+                            value={pageBackgroundImageUrl}
+                            onChange={(e) => setPageBackgroundImageUrl(e.target.value)}
+                            placeholder="https://example.com/image.jpg"
+                            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Image Size</label>
+                          <select
+                            value={pageBackgroundImageSize}
+                            onChange={(e) => setPageBackgroundImageSize(e.target.value as any)}
+                            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                          >
+                            <option value="cover">Cover (fill area)</option>
+                            <option value="contain">Contain (fit inside)</option>
+                            <option value="auto">Auto (original size)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Image Position</label>
+                          <select
+                            value={pageBackgroundImagePosition}
+                            onChange={(e) => setPageBackgroundImagePosition(e.target.value)}
+                            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                          >
+                            <option value="center">Center</option>
+                            <option value="top">Top</option>
+                            <option value="bottom">Bottom</option>
+                            <option value="left">Left</option>
+                            <option value="right">Right</option>
+                            <option value="top left">Top Left</option>
+                            <option value="top right">Top Right</option>
+                            <option value="bottom left">Bottom Left</option>
+                            <option value="bottom right">Bottom Right</option>
+                          </select>
+                        </div>
+
+                        {/* Image Preview */}
+                        {pageBackgroundImageUrl && (
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Preview</label>
+                            <div 
+                              className="w-full h-32 rounded border border-zinc-700"
+                              style={{
+                                backgroundImage: `url(${pageBackgroundImageUrl})`,
+                                backgroundSize: pageBackgroundImageSize,
+                                backgroundPosition: pageBackgroundImagePosition,
+                                backgroundRepeat: 'no-repeat'
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Animated Image Configuration */}
+                    {pageBackgroundType === 'animated-image' && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Image URL</label>
+                          <input
+                            type="text"
+                            value={pageBackgroundImageUrl}
+                            onChange={(e) => setPageBackgroundImageUrl(e.target.value)}
+                            placeholder="https://example.com/image.jpg"
+                            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Animation Type</label>
+                          <select
+                            value={pageBackgroundAnimationType}
+                            onChange={(e) => setPageBackgroundAnimationType(e.target.value as any)}
+                            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                          >
+                            <option value="ken-burns">Ken Burns (slow zoom/pan)</option>
+                            <option value="parallax">Parallax (scroll effect)</option>
+                            <option value="pulse">Pulse (subtle scale)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Animation Duration (seconds)</label>
+                          <input
+                            type="number"
+                            value={pageBackgroundAnimationDuration}
+                            onChange={(e) => setPageBackgroundAnimationDuration(Number(e.target.value))}
+                            min="1"
+                            max="60"
+                            step="1"
+                            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Image Size</label>
+                          <select
+                            value={pageBackgroundImageSize}
+                            onChange={(e) => setPageBackgroundImageSize(e.target.value as any)}
+                            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
+                          >
+                            <option value="cover">Cover (fill area)</option>
+                            <option value="contain">Contain (fit inside)</option>
+                            <option value="auto">Auto (original size)</option>
+                          </select>
+                        </div>
+
+                        {/* Animated Preview */}
+                        {pageBackgroundImageUrl && (
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Preview (static)</label>
+                            <div 
+                              className="w-full h-32 rounded border border-zinc-700"
+                              style={{
+                                backgroundImage: `url(${pageBackgroundImageUrl})`,
+                                backgroundSize: pageBackgroundImageSize,
+                                backgroundPosition: 'center',
+                                backgroundRepeat: 'no-repeat'
+                              }}
+                            />
+                            <p className="text-xs text-zinc-500 mt-1">Animation will be active in live preview</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Action Buttons */}
@@ -1201,24 +1452,228 @@ export default function AssetEditorPage() {
                       />
                     </div>
 
-                    {/* Background Color */}
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Background Color</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={pageBackgroundColor || '#000000'}
-                          onChange={(e) => setPageBackgroundColor(e.target.value)}
-                          className="w-12 h-10 rounded cursor-pointer"
-                        />
-                        <input
-                          type="text"
-                          value={pageBackgroundColor || ''}
-                          onChange={(e) => setPageBackgroundColor(e.target.value)}
-                          placeholder="#000000"
-                          className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white font-mono text-sm"
-                        />
+                    {/* Page Background Configuration */}
+                    <div className="border-t border-zinc-800 pt-4">
+                      <h3 className="text-sm font-medium mb-3">Page Background</h3>
+                      
+                      {/* Background Type Dropdown */}
+                      <div className="mb-3">
+                        <label className="block text-xs font-medium mb-2">Background Type</label>
+                        <select
+                          value={pageBackgroundType}
+                          onChange={(e) => setPageBackgroundType(e.target.value as any)}
+                          className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white text-sm"
+                        >
+                          <option value="colour">Solid Colour</option>
+                          <option value="gradient">Gradient</option>
+                          <option value="image">Image</option>
+                          <option value="animated-image">Animated Image</option>
+                        </select>
                       </div>
+
+                      {/* Colour Configuration */}
+                      {pageBackgroundType === 'colour' && (
+                        <div className="space-y-2">
+                          <label className="block text-xs font-medium">Color</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={pageBackgroundColor || canvasBackgroundColor}
+                              onChange={(e) => setPageBackgroundColor(e.target.value)}
+                              className="w-10 h-8 rounded cursor-pointer"
+                            />
+                            <input
+                              type="text"
+                              value={pageBackgroundColor}
+                              onChange={(e) => setPageBackgroundColor(e.target.value)}
+                              placeholder="Asset default"
+                              className="flex-1 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white text-sm font-mono"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Gradient Configuration */}
+                      {pageBackgroundType === 'gradient' && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-medium mb-2">Gradient Type</label>
+                            <select
+                              value={pageBackgroundGradientType}
+                              onChange={(e) => setPageBackgroundGradientType(e.target.value as any)}
+                              className="w-full px-2 py-1 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white text-sm"
+                            >
+                              <option value="linear">Linear</option>
+                              <option value="radial">Radial</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium mb-2">Colors</label>
+                            <input
+                              type="text"
+                              value={pageBackgroundGradientColors}
+                              onChange={(e) => setPageBackgroundGradientColors(e.target.value)}
+                              placeholder="#000,#fff"
+                              className="w-full px-2 py-1 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white text-xs font-mono"
+                            />
+                            <p className="text-[10px] text-zinc-500 mt-1">Comma-separated</p>
+                          </div>
+
+                          {pageBackgroundGradientType === 'linear' && (
+                            <div>
+                              <label className="block text-xs font-medium mb-2">Angle: {pageBackgroundGradientAngle}°</label>
+                              <input
+                                type="range"
+                                value={pageBackgroundGradientAngle}
+                                onChange={(e) => setPageBackgroundGradientAngle(Number(e.target.value))}
+                                min="0"
+                                max="360"
+                                step="15"
+                                className="w-full"
+                              />
+                            </div>
+                          )}
+
+                          {/* Gradient Preview */}
+                          <div 
+                            className="w-full h-16 rounded border border-zinc-700"
+                            style={{
+                              background: pageBackgroundGradientType === 'linear'
+                                ? `linear-gradient(${pageBackgroundGradientAngle}deg, ${pageBackgroundGradientColors.split(',').join(', ')})`
+                                : `radial-gradient(circle, ${pageBackgroundGradientColors.split(',').join(', ')})`
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Image Configuration */}
+                      {pageBackgroundType === 'image' && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-medium mb-2">Image URL</label>
+                            <input
+                              type="text"
+                              value={pageBackgroundImageUrl}
+                              onChange={(e) => setPageBackgroundImageUrl(e.target.value)}
+                              placeholder="https://..."
+                              className="w-full px-2 py-1 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white text-xs"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium mb-2">Size</label>
+                            <select
+                              value={pageBackgroundImageSize}
+                              onChange={(e) => setPageBackgroundImageSize(e.target.value as any)}
+                              className="w-full px-2 py-1 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white text-sm"
+                            >
+                              <option value="cover">Cover</option>
+                              <option value="contain">Contain</option>
+                              <option value="auto">Auto</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium mb-2">Position</label>
+                            <select
+                              value={pageBackgroundImagePosition}
+                              onChange={(e) => setPageBackgroundImagePosition(e.target.value)}
+                              className="w-full px-2 py-1 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white text-sm"
+                            >
+                              <option value="center">Center</option>
+                              <option value="top">Top</option>
+                              <option value="bottom">Bottom</option>
+                              <option value="left">Left</option>
+                              <option value="right">Right</option>
+                            </select>
+                          </div>
+
+                          {/* Image Preview */}
+                          {pageBackgroundImageUrl && (
+                            <div 
+                              className="w-full h-24 rounded border border-zinc-700"
+                              style={{
+                                backgroundImage: `url(${pageBackgroundImageUrl})`,
+                                backgroundSize: pageBackgroundImageSize,
+                                backgroundPosition: pageBackgroundImagePosition,
+                                backgroundRepeat: 'no-repeat'
+                              }}
+                            />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Animated Image Configuration */}
+                      {pageBackgroundType === 'animated-image' && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-medium mb-2">Image URL</label>
+                            <input
+                              type="text"
+                              value={pageBackgroundImageUrl}
+                              onChange={(e) => setPageBackgroundImageUrl(e.target.value)}
+                              placeholder="https://..."
+                              className="w-full px-2 py-1 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white text-xs"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium mb-2">Animation</label>
+                            <select
+                              value={pageBackgroundAnimationType}
+                              onChange={(e) => setPageBackgroundAnimationType(e.target.value as any)}
+                              className="w-full px-2 py-1 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white text-sm"
+                            >
+                              <option value="ken-burns">Ken Burns</option>
+                              <option value="parallax">Parallax</option>
+                              <option value="pulse">Pulse</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium mb-2">Duration: {pageBackgroundAnimationDuration}s</label>
+                            <input
+                              type="range"
+                              value={pageBackgroundAnimationDuration}
+                              onChange={(e) => setPageBackgroundAnimationDuration(Number(e.target.value))}
+                              min="1"
+                              max="60"
+                              step="1"
+                              className="w-full"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium mb-2">Size</label>
+                            <select
+                              value={pageBackgroundImageSize}
+                              onChange={(e) => setPageBackgroundImageSize(e.target.value as any)}
+                              className="w-full px-2 py-1 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white text-sm"
+                            >
+                              <option value="cover">Cover</option>
+                              <option value="contain">Contain</option>
+                              <option value="auto">Auto</option>
+                            </select>
+                          </div>
+
+                          {/* Preview */}
+                          {pageBackgroundImageUrl && (
+                            <div>
+                              <div 
+                                className="w-full h-24 rounded border border-zinc-700"
+                                style={{
+                                  backgroundImage: `url(${pageBackgroundImageUrl})`,
+                                  backgroundSize: pageBackgroundImageSize,
+                                  backgroundPosition: 'center',
+                                  backgroundRepeat: 'no-repeat'
+                                }}
+                              />
+                              <p className="text-[10px] text-zinc-500 mt-1">Static preview</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Transition Type */}

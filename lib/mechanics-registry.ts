@@ -1260,6 +1260,318 @@ export const MECHANICS_REGISTRY: Record<string, MechanicDefinition> = {
         step: 4
       }
     }
+  },
+
+  // ============================================================================
+  // MEDIA MECHANICS (Phase 3)
+  // ============================================================================
+
+  videoplayer: {
+    type: 'videoplayer',
+    name: 'Video Player',
+    description: 'Embedded video player with custom controls',
+    category: 'media',
+    icon: 'Video',
+    properties: {
+      videoUrl: {
+        type: 'text',
+        label: 'Video URL',
+        defaultValue: '',
+        placeholder: 'https://example.com/video.mp4'
+      },
+      poster: {
+        type: 'text',
+        label: 'Poster Image URL',
+        defaultValue: '',
+        placeholder: 'https://example.com/poster.jpg',
+        help: 'Thumbnail shown before playback'
+      },
+      autoplay: {
+        type: 'toggle',
+        label: 'Autoplay',
+        defaultValue: false
+      },
+      loop: {
+        type: 'toggle',
+        label: 'Loop',
+        defaultValue: false
+      },
+      muted: {
+        type: 'toggle',
+        label: 'Muted',
+        defaultValue: false
+      },
+      controls: {
+        type: 'toggle',
+        label: 'Show Controls',
+        defaultValue: true
+      }
+    }
+  },
+
+  imagegallery: {
+    type: 'imagegallery',
+    name: 'Image Gallery',
+    description: 'Grid or carousel image gallery with lightbox',
+    category: 'media',
+    icon: 'Images',
+    properties: {
+      images: {
+        type: 'textarea',
+        label: 'Images (JSON)',
+        defaultValue: JSON.stringify([
+          { url: 'https://picsum.photos/400/300?random=1', caption: 'Image 1' },
+          { url: 'https://picsum.photos/400/300?random=2', caption: 'Image 2' },
+          { url: 'https://picsum.photos/400/300?random=3', caption: 'Image 3' }
+        ], null, 2),
+        placeholder: '[{"url": "...", "caption": "..."}]',
+        help: 'Array of image objects with url and caption'
+      },
+      layout: {
+        type: 'select',
+        label: 'Layout',
+        defaultValue: 'grid',
+        options: [
+          { label: 'Grid', value: 'grid' },
+          { label: 'Carousel', value: 'carousel' }
+        ]
+      },
+      columns: {
+        type: 'number',
+        label: 'Columns (Grid)',
+        defaultValue: 3,
+        min: 1,
+        max: 6,
+        step: 1
+      },
+      gap: {
+        type: 'number',
+        label: 'Gap (px)',
+        defaultValue: 16,
+        min: 0,
+        max: 48,
+        step: 4
+      },
+      aspectRatio: {
+        type: 'text',
+        label: 'Aspect Ratio',
+        defaultValue: '1/1',
+        placeholder: '16/9, 4/3, 1/1'
+      },
+      showCaptions: {
+        type: 'toggle',
+        label: 'Show Captions',
+        defaultValue: true
+      }
+    }
+  },
+
+  imagecomparison: {
+    type: 'imagecomparison',
+    name: 'Image Comparison',
+    description: 'Before/after image slider',
+    category: 'media',
+    icon: 'SplitSquareHorizontal',
+    properties: {
+      beforeImage: {
+        type: 'text',
+        label: 'Before Image URL',
+        defaultValue: 'https://picsum.photos/800/600?random=1',
+        placeholder: 'https://example.com/before.jpg'
+      },
+      afterImage: {
+        type: 'text',
+        label: 'After Image URL',
+        defaultValue: 'https://picsum.photos/800/600?random=2',
+        placeholder: 'https://example.com/after.jpg'
+      },
+      beforeLabel: {
+        type: 'text',
+        label: 'Before Label',
+        defaultValue: 'Before'
+      },
+      afterLabel: {
+        type: 'text',
+        label: 'After Label',
+        defaultValue: 'After'
+      },
+      initialPosition: {
+        type: 'number',
+        label: 'Initial Position (%)',
+        defaultValue: 50,
+        min: 0,
+        max: 100,
+        step: 5
+      }
+    }
+  },
+
+  iconlibrary: {
+    type: 'iconlibrary',
+    name: 'Icon',
+    description: 'Lucide icon library',
+    category: 'media',
+    icon: 'Smile',
+    properties: {
+      iconName: {
+        type: 'text',
+        label: 'Icon Name',
+        defaultValue: 'Star',
+        placeholder: 'Star, Heart, CheckCircle...',
+        help: 'Browse icons at lucide.dev'
+      },
+      size: {
+        type: 'number',
+        label: 'Size (px)',
+        defaultValue: 48,
+        min: 16,
+        max: 256,
+        step: 8
+      },
+      color: {
+        type: 'color',
+        label: 'Color',
+        defaultValue: '#3b82f6'
+      },
+      strokeWidth: {
+        type: 'number',
+        label: 'Stroke Width',
+        defaultValue: 2,
+        min: 0.5,
+        max: 4,
+        step: 0.5
+      }
+    }
+  },
+
+  logogrid: {
+    type: 'logogrid',
+    name: 'Logo Grid',
+    description: 'Client/partner logo showcase',
+    category: 'media',
+    icon: 'Grid3x3',
+    properties: {
+      logos: {
+        type: 'textarea',
+        label: 'Logos (JSON)',
+        defaultValue: JSON.stringify([
+          { url: 'https://via.placeholder.com/150x60?text=Logo+1', name: 'Company 1', link: '' },
+          { url: 'https://via.placeholder.com/150x60?text=Logo+2', name: 'Company 2', link: '' },
+          { url: 'https://via.placeholder.com/150x60?text=Logo+3', name: 'Company 3', link: '' },
+          { url: 'https://via.placeholder.com/150x60?text=Logo+4', name: 'Company 4', link: '' }
+        ], null, 2),
+        placeholder: '[{"url": "...", "name": "...", "link": "..."}]'
+      },
+      columns: {
+        type: 'number',
+        label: 'Columns',
+        defaultValue: 4,
+        min: 2,
+        max: 6,
+        step: 1
+      },
+      gap: {
+        type: 'number',
+        label: 'Gap (px)',
+        defaultValue: 24,
+        min: 8,
+        max: 64,
+        step: 8
+      },
+      logoSize: {
+        type: 'text',
+        label: 'Logo Height',
+        defaultValue: '120px',
+        placeholder: '80px, 100px, 120px'
+      },
+      grayscale: {
+        type: 'toggle',
+        label: 'Grayscale',
+        defaultValue: true,
+        help: 'Show logos in grayscale by default'
+      },
+      hoverEffect: {
+        type: 'toggle',
+        label: 'Hover Effect',
+        defaultValue: true,
+        help: 'Scale and remove grayscale on hover'
+      }
+    }
+  },
+
+  avatarcard: {
+    type: 'avatarcard',
+    name: 'Avatar Card',
+    description: 'Team member profile card',
+    category: 'media',
+    icon: 'UserCircle',
+    properties: {
+      imageUrl: {
+        type: 'text',
+        label: 'Image URL',
+        defaultValue: '',
+        placeholder: 'https://example.com/avatar.jpg'
+      },
+      name: {
+        type: 'text',
+        label: 'Name',
+        defaultValue: 'Team Member'
+      },
+      title: {
+        type: 'text',
+        label: 'Job Title',
+        defaultValue: 'Position'
+      },
+      bio: {
+        type: 'textarea',
+        label: 'Bio',
+        defaultValue: '',
+        placeholder: 'Short biography or description'
+      },
+      email: {
+        type: 'text',
+        label: 'Email',
+        defaultValue: '',
+        placeholder: 'email@example.com'
+      },
+      linkedin: {
+        type: 'text',
+        label: 'LinkedIn URL',
+        defaultValue: '',
+        placeholder: 'https://linkedin.com/in/username'
+      },
+      twitter: {
+        type: 'text',
+        label: 'Twitter URL',
+        defaultValue: '',
+        placeholder: 'https://twitter.com/username'
+      },
+      github: {
+        type: 'text',
+        label: 'GitHub URL',
+        defaultValue: '',
+        placeholder: 'https://github.com/username'
+      },
+      layout: {
+        type: 'select',
+        label: 'Layout',
+        defaultValue: 'vertical',
+        options: [
+          { label: 'Vertical', value: 'vertical' },
+          { label: 'Horizontal', value: 'horizontal' }
+        ]
+      },
+      backgroundColor: {
+        type: 'color',
+        label: 'Background Color',
+        defaultValue: '#18181b'
+      },
+      textColor: {
+        type: 'color',
+        label: 'Text Color',
+        defaultValue: '#ffffff'
+      }
+    }
   }
 }
 

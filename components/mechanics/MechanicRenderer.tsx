@@ -17,6 +17,12 @@ import { Tabs } from '@/components/mechanics/Tabs'
 import { GridLayout } from '@/components/mechanics/GridLayout'
 import { Modal } from '@/components/mechanics/Modal'
 import { SplitScreen } from '@/components/mechanics/SplitScreen'
+import { VideoPlayer } from '@/components/mechanics/VideoPlayer'
+import { ImageGallery } from '@/components/mechanics/ImageGallery'
+import { ImageComparison } from '@/components/mechanics/ImageComparison'
+import { IconLibrary } from '@/components/mechanics/IconLibrary'
+import { LogoGrid } from '@/components/mechanics/LogoGrid'
+import { AvatarCard } from '@/components/mechanics/AvatarCard'
 
 interface MechanicInstance {
   id: string
@@ -81,6 +87,21 @@ export function MechanicRenderer({
         return <Modal {...enhancedProps as any} />
       case 'splitscreen':
         return <SplitScreen {...enhancedProps as any} />
+      
+      // Phase 3: Media
+      case 'videoplayer':
+        return <VideoPlayer {...enhancedProps as any} />
+      case 'imagegallery':
+        return <ImageGallery {...enhancedProps as any} images={props.images ? JSON.parse(props.images) : []} />
+      case 'imagecomparison':
+        return <ImageComparison {...enhancedProps as any} />
+      case 'iconlibrary':
+        return <IconLibrary {...enhancedProps as any} />
+      case 'logogrid':
+        return <LogoGrid {...enhancedProps as any} logos={props.logos ? JSON.parse(props.logos) : []} />
+      case 'avatarcard':
+        return <AvatarCard {...enhancedProps as any} />
+      
       default:
         return (
           <div className="p-4 bg-red-900/20 border border-red-800 text-red-400 rounded">

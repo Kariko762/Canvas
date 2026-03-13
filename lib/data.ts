@@ -51,6 +51,15 @@ export interface Page {
   transition_duration?: number // in milliseconds
   canvas_background_color?: string
   canvas_background_image?: string
+  background_type?: 'colour' | 'gradient' | 'image' | 'animated-image'
+  background_gradient_type?: 'linear' | 'radial'
+  background_gradient_colors?: string
+  background_gradient_angle?: number
+  background_image_url?: string
+  background_image_size?: 'cover' | 'contain' | 'auto'
+  background_image_position?: string
+  background_animation_type?: 'ken-burns' | 'parallax' | 'pulse'
+  background_animation_duration?: number
   mechanics: string // JSON string of mechanics array
   created_at: number
   updated_at: number
