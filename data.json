@@ -1,0 +1,122 @@
+{
+  "users": [
+    {
+      "id": "admin-default",
+      "email": "admin@fis.com",
+      "password": "$2b$10$xCzCghk0jcZvg0FoKTY4NuXhgAvCLpnuCsk3qSlHdBtqGSMp1bhZO",
+      "name": "Admin User",
+      "role": "admin",
+      "created_at": 1710316800,
+      "updated_at": 1710316800
+    }
+  ],
+  "workspaces": [
+    {
+      "id": "ws-default",
+      "name": "Default Workspace",
+      "slug": "default",
+      "description": "Your main workspace",
+      "color": "#6366f1",
+      "created_by": "admin-default",
+      "created_at": 1710316800,
+      "updated_at": 1710316800
+    }
+  ],
+  "assets": [
+    {
+      "id": "asset-1",
+      "workspace_id": "ws-default",
+      "title": "New Asset",
+      "slug": "first-asset",
+      "description": "Description for my first asset",
+      "status": "draft",
+      "canvas_background_color": "#4bcd3e",
+      "canvas_text_color": "#ffffff",
+      "created_by": "admin-default",
+      "created_at": 1773383329,
+      "updated_at": 1773397932
+    },
+    {
+      "id": "asset-2",
+      "workspace_id": "ws-default",
+      "title": "Second Asset",
+      "slug": "second-asset",
+      "description": "This is my second asset",
+      "status": "draft",
+      "canvas_background_color": "#ff0000",
+      "canvas_text_color": "#ffffff",
+      "created_by": "admin-default",
+      "created_at": 1773383587,
+      "updated_at": 1773383587
+    },
+    {
+      "id": "ZImiKVSilXrD_AIqVqyzX",
+      "workspace_id": "ws-default",
+      "title": "third-asset",
+      "slug": "third",
+      "description": "dsfg",
+      "status": "draft",
+      "canvas_background_color": "#250f4d",
+      "canvas_text_color": "#ffffff",
+      "created_by": "admin-default",
+      "created_at": 1773384302,
+      "updated_at": 1773384302
+    }
+  ],
+  "pages": [
+    {
+      "id": "78y2zEJ6fZJktkWeHr101",
+      "asset_id": "ZImiKVSilXrD_AIqVqyzX",
+      "title": "Page 1",
+      "slug": "page-1",
+      "order": 0,
+      "status": "draft",
+      "transition_type": "fade",
+      "transition_duration": 300,
+      "mechanics": "[]",
+      "created_at": 1773384307,
+      "updated_at": 1773384307
+    },
+    {
+      "id": "JUWZIf80cqcHUJKLDwIOZ",
+      "asset_id": "asset-1",
+      "title": "Welcome Page",
+      "slug": "page-1",
+      "order": 1,
+      "status": "draft",
+      "transition_type": "fade",
+      "transition_duration": 300,
+      "mechanics": "[{\"id\":\"d_4iAouUaNteyq0Y5B0eI\",\"type\":\"title\",\"props\":{\"text\":\"This is the title!\",\"size\":\"lg\",\"weight\":\"medium\",\"align\":\"center\",\"color\":\"#4bcd3e\"},\"layer\":2},{\"id\":\"yws6ZTLXFokK67__AFQb4\",\"type\":\"shape\",\"props\":{\"shapeType\":\"circle\",\"width\":200,\"height\":200,\"backgroundColor\":\"#6366f1\",\"borderColor\":\"#ffffff\",\"borderWidth\":0,\"opacity\":85},\"layer\":1}]",
+      "created_at": 1773397034,
+      "updated_at": 1773406469,
+      "canvas_background_color": null
+    },
+    {
+      "id": "V3t7Z9WIILggUUjzC8c9b",
+      "asset_id": "asset-1",
+      "title": "Page 2",
+      "slug": "page-2",
+      "order": 2,
+      "status": "draft",
+      "transition_type": "slide-right",
+      "transition_duration": 500,
+      "mechanics": "[{\"id\":\"jVCv4Lyp3Cnip4Zcpxi8Y\",\"type\":\"title\",\"props\":{\"text\":\"Title - im quite enjoying this\",\"size\":\"xl\",\"weight\":\"bold\",\"align\":\"center\",\"color\":\"#ffffff\"}},{\"id\":\"j6E6kCH8uUbtMYPM7tzoP\",\"type\":\"text\",\"props\":{\"content\":\"I wonder if its possible for me to build into this the ability to connect to my office 365 Co-Pilot\",\"size\":\"base\",\"align\":\"left\",\"color\":\"#ffffff\",\"maxWidth\":\"full\"}}]",
+      "created_at": 1773397065,
+      "updated_at": 1773397925
+    },
+    {
+      "id": "9vtKO3ThJfbPNEqNct_g-",
+      "asset_id": "asset-2",
+      "title": "Welcome Page",
+      "slug": "welcome",
+      "order": 1,
+      "status": "draft",
+      "transition_type": "slide-left",
+      "transition_duration": 300,
+      "mechanics": "[]",
+      "created_at": 1773406732,
+      "updated_at": 1773406752,
+      "canvas_background_color": null
+    }
+  ]
+}
