@@ -1,0 +1,16 @@
+[
+  {
+    "id": "9vtKO3ThJfbPNEqNct_g-",
+    "asset_id": "asset-2",
+    "title": "Welcome Page",
+    "slug": "welcome",
+    "order": 1,
+    "status": "draft",
+    "transition_type": "slide-left",
+    "transition_duration": 300,
+    "mechanics": "[]",
+    "created_at": 1773406732,
+    "updated_at": 1773406752,
+    "canvas_background_color": null
+  }
+]

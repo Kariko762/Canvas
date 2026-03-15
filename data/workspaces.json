@@ -1,0 +1,12 @@
+[
+  {
+    "id": "ws-default",
+    "name": "Default Workspace",
+    "slug": "default",
+    "description": "Your main workspace",
+    "color": "#6366f1",
+    "created_by": "admin-default",
+    "created_at": 1710316800,
+    "updated_at": 1710316800
+  }
+]

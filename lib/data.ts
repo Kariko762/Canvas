@@ -1,7 +1,10 @@
 import fs from 'fs/promises'
 import path from 'path'
 
-const DATA_PATH = path.join(process.cwd(), 'data.json')
+const DATA_DIR = path.join(process.cwd(), 'data')
+const USERS_PATH = path.join(DATA_DIR, 'users.json')
+const WORKSPACES_PATH = path.join(DATA_DIR, 'workspaces.json')
+const ASSETS_DIR = path.join(DATA_DIR, 'assets')
 
 export interface User {
   id: string
@@ -72,18 +75,70 @@ export interface Database {
   pages: Page[]
 }
 
-export async function readDatabase(): Promise<Database> {
+// Helper functions for file I/O
+async function readJsonFile<T>(filePath: string, defaultValue: T): Promise<T> {
   try {
-    const content = await fs.readFile(DATA_PATH, 'utf-8')
+    const content = await fs.readFile(filePath, 'utf-8')
     return JSON.parse(content)
   } catch (error) {
-    // Return empty database if file doesn't exist
+    return defaultValue
+  }
+}
+
+async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
+  await fs.mkdir(path.dirname(filePath), { recursive: true })
+  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
+}
+
+async function ensureDataDir(): Promise<void> {
+  await fs.mkdir(DATA_DIR, { recursive: true })
+  await fs.mkdir(ASSETS_DIR, { recursive: true })
+}
+
+// Legacy compatibility - reads all data into single object
+export async function readDatabase(): Promise<Database> {
+  try {
+    const [users, workspaces] = await Promise.all([
+      readJsonFile<User[]>(USERS_PATH, []),
+      readJsonFile<Workspace[]>(WORKSPACES_PATH, [])
+    ])
+    
+    // Read all assets and their pages
+    const assetDirs = await fs.readdir(ASSETS_DIR).catch(() => [])
+    const assetsData = await Promise.all(
+      assetDirs.map(async (assetId) => {
+        const metaPath = path.join(ASSETS_DIR, assetId, 'meta.json')
+        const pagesPath = path.join(ASSETS_DIR, assetId, 'pages.json')
+        const asset = await readJsonFile<Asset>(metaPath, null as any)
+        const pages = await readJsonFile<Page[]>(pagesPath, [])
+        return { asset, pages }
+      })
+    )
+    
+    const assets = assetsData.filter(d => d.asset).map(d => d.asset)
+    const pages = assetsData.flatMap(d => d.pages)
+    
+    return { users, workspaces, assets, pages }
+  } catch (error) {
     return { users: [], workspaces: [], assets: [], pages: [] }
   }
 }
 
+// Legacy compatibility - writes everything back
 export async function writeDatabase(data: Database): Promise<void> {
-  await fs.writeFile(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8')
+  await ensureDataDir()
+  await writeJsonFile(USERS_PATH, data.users)
+  await writeJsonFile(WORKSPACES_PATH, data.workspaces)
+  
+  // Write each asset and its pages
+  for (const asset of data.assets) {
+    const assetDir = path.join(ASSETS_DIR, asset.id)
+    await fs.mkdir(assetDir, { recursive: true })
+    await writeJsonFile(path.join(assetDir, 'meta.json'), asset)
+    
+    const assetPages = data.pages.filter(p => p.asset_id === asset.id)
+    await writeJsonFile(path.join(assetDir, 'pages.json'), assetPages)
+  }
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
@@ -174,6 +229,13 @@ export async function createAsset(asset: Omit<Asset, 'created_at' | 'updated_at'
   }
   db.assets.push(newAsset)
   await writeDatabase(db)
+  
+  // Create asset directory and initialize empty pages
+  const assetDir = path.join(ASSETS_DIR, newAsset.id)
+  await fs.mkdir(assetDir, { recursive: true })
+  await writeJsonFile(path.join(assetDir, 'meta.json'), newAsset)
+  await writeJsonFile(path.join(assetDir, 'pages.json'), [])
+  
   return newAsset
 }
 
@@ -188,6 +250,11 @@ export async function updateAsset(id: string, updates: Partial<Asset>): Promise<
     updated_at: Math.floor(Date.now() / 1000)
   }
   await writeDatabase(db)
+  
+  // Also update the meta.json file
+  const metaPath = path.join(ASSETS_DIR, id, 'meta.json')
+  await writeJsonFile(metaPath, db.assets[index])
+  
   return db.assets[index]
 }
 
@@ -200,6 +267,15 @@ export async function deleteAsset(id: string): Promise<boolean> {
   // Also delete associated pages
   db.pages = db.pages.filter(p => p.asset_id !== id)
   await writeDatabase(db)
+  
+  // Delete asset directory
+  const assetDir = path.join(ASSETS_DIR, id)
+  try {
+    await fs.rm(assetDir, { recursive: true, force: true })
+  } catch (error) {
+    // Ignore if directory doesn't exist
+  }
+  
   return true
 }
 
@@ -249,5 +325,79 @@ export async function deletePage(id: string): Promise<boolean> {
   
   db.pages.splice(index, 1)
   await writeDatabase(db)
+  return true
+}
+
+// Optimized functions for direct file access (avoid loading entire DB)
+export async function getAssetMeta(assetId: string): Promise<Asset | null> {
+  const metaPath = path.join(ASSETS_DIR, assetId, 'meta.json')
+  return await readJsonFile<Asset>(metaPath, null as any)
+}
+
+export async function updateAssetMeta(assetId: string, updates: Partial<Asset>): Promise<Asset | null> {
+  const metaPath = path.join(ASSETS_DIR, assetId, 'meta.json')
+  const asset = await readJsonFile<Asset>(metaPath, null as any)
+  if (!asset) return null
+  
+  const updated = {
+    ...asset,
+    ...updates,
+    updated_at: Math.floor(Date.now() / 1000)
+  }
+  await writeJsonFile(metaPath, updated)
+  return updated
+}
+
+export async function getAssetPages(assetId: string): Promise<Page[]> {
+  const pagesPath = path.join(ASSETS_DIR, assetId, 'pages.json')
+  const pages = await readJsonFile<Page[]>(pagesPath, [])
+  return pages.sort((a, b) => a.order - b.order)
+}
+
+export async function updateAssetPages(assetId: string, pages: Page[]): Promise<void> {
+  const pagesPath = path.join(ASSETS_DIR, assetId, 'pages.json')
+  await writeJsonFile(pagesPath, pages)
+}
+
+export async function getAssetPage(assetId: string, pageId: string): Promise<Page | null> {
+  const pages = await getAssetPages(assetId)
+  return pages.find(p => p.id === pageId) || null
+}
+
+export async function updateAssetPage(assetId: string, pageId: string, updates: Partial<Page>): Promise<Page | null> {
+  const pages = await getAssetPages(assetId)
+  const index = pages.findIndex(p => p.id === pageId)
+  if (index === -1) return null
+  
+  pages[index] = {
+    ...pages[index],
+    ...updates,
+    updated_at: Math.floor(Date.now() / 1000)
+  }
+  await updateAssetPages(assetId, pages)
+  return pages[index]
+}
+
+export async function createAssetPage(assetId: string, page: Omit<Page, 'created_at' | 'updated_at'>): Promise<Page> {
+  const pages = await getAssetPages(assetId)
+  const now = Math.floor(Date.now() / 1000)
+  const newPage: Page = {
+    ...page,
+    asset_id: assetId,
+    created_at: now,
+    updated_at: now
+  }
+  pages.push(newPage)
+  await updateAssetPages(assetId, pages)
+  return newPage
+}
+
+export async function deleteAssetPage(assetId: string, pageId: string): Promise<boolean> {
+  const pages = await getAssetPages(assetId)
+  const index = pages.findIndex(p => p.id === pageId)
+  if (index === -1) return false
+  
+  pages.splice(index, 1)
+  await updateAssetPages(assetId, pages)
   return true
 }

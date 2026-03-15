@@ -372,15 +372,16 @@ export const MECHANICS_REGISTRY: Record<string, MechanicDefinition> = {
           { label: 'Next Page', value: 'next' },
           { label: 'Previous Page', value: 'prev' },
           { label: 'Go to Page', value: 'goto' },
-          { label: 'External Link', value: 'link' }
+          { label: 'External Link', value: 'link' },
+          { label: 'Open Modal', value: 'modal' }
         ]
       },
       actionValue: {
         type: 'text',
         label: 'Action Value',
         defaultValue: '',
-        placeholder: 'Page slug or URL',
-        help: 'For "Go to Page" enter page slug, for "External Link" enter URL'
+        placeholder: 'Page slug, URL, or Modal ID',
+        help: 'For "Go to Page" enter page slug, for "External Link" enter URL, for "Open Modal" select from dropdown'
       },
       backgroundColor: {
         type: 'color',
@@ -966,6 +967,11 @@ export const MECHANICS_REGISTRY: Record<string, MechanicDefinition> = {
         type: 'color',
         label: 'Background Color',
         defaultValue: '#ffffff'
+      },
+      tabBarBackgroundColor: {
+        type: 'color',
+        label: 'Tab Bar Background Color',
+        defaultValue: '#f3f4f6'
       },
       textColor: {
         type: 'color',
@@ -1608,6 +1614,24 @@ export function createMechanicInstance(type: string, id: string, x: number = 100
   const props: Record<string, any> = {}
   for (const [key, propDef] of Object.entries(definition.properties)) {
     props[key] = propDef.defaultValue
+  }
+
+  // Set default tabs for tabs component
+  if (type === 'tabs' && !props.tabs) {
+    props.tabs = [
+      { id: '1', label: 'Tab 1', content: 'Content for tab 1' },
+      { id: '2', label: 'Tab 2', content: 'Content for tab 2' },
+      { id: '3', label: 'Tab 3', content: 'Content for tab 3' }
+    ]
+  }
+
+  // Set default sections for accordion component
+  if (type === 'accordion' && !props.items) {
+    props.items = [
+      { id: '1', title: 'Section 1', content: 'Content for section 1' },
+      { id: '2', title: 'Section 2', content: 'Content for section 2' },
+      { id: '3', title: 'Section 3', content: 'Content for section 3' }
+    ]
   }
 
   // Get the highest layer number + 1

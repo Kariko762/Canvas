@@ -1,0 +1,15 @@
+[
+  {
+    "id": "78y2zEJ6fZJktkWeHr101",
+    "asset_id": "ZImiKVSilXrD_AIqVqyzX",
+    "title": "Page 1",
+    "slug": "page-1",
+    "order": 0,
+    "status": "draft",
+    "transition_type": "fade",
+    "transition_duration": 300,
+    "mechanics": "[]",
+    "created_at": 1773384307,
+    "updated_at": 1773384307
+  }
+]

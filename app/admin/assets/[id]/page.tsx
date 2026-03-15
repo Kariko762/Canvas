@@ -2,15 +2,21 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Settings, Save, GripVertical, Layers, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Settings, Save, GripVertical, Layers, ChevronDown, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import Link from 'next/link';
 import { nanoid } from 'nanoid';
 import { useConfirm } from '@/components/ui/useConfirm';
 import { useUnsavedChanges } from '@/components/ui/useUnsavedChanges';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ColorPicker } from '@/components/ui/ColorPicker';
 import { MechanicRenderer } from '@/components/mechanics/MechanicRenderer';
 import { LayerPanel } from '@/components/editor/LayerPanel';
 import { MechanicsToolbar } from '@/components/editor/MechanicsToolbar';
+import { AccordionEditor } from '@/components/editor/AccordionEditor';
+import { TabsEditor } from '@/components/editor/TabsEditor';
+import { GridEditor } from '@/components/editor/GridEditor';
+import { LogoGridEditor } from '@/components/editor/LogoGridEditor';
+import { useGlobalLoading } from '@/components/ui/GlobalLoadingContext';
 import { 
   getAllMechanics, 
   getMechanicsByCategory,
@@ -73,6 +79,7 @@ type ViewMode = 'asset' | 'page-editor' | 'page-properties';
 export default function AssetEditorPage() {
   const params = useParams();
   const router = useRouter();
+  const { hideLoading, showLoading, setProgress } = useGlobalLoading();
   const assetId = params.id as string;
   
   const [asset, setAsset] = useState<Asset | null>(null);
@@ -113,6 +120,8 @@ export default function AssetEditorPage() {
   const [pageBackgroundAnimationType, setPageBackgroundAnimationType] = useState<'ken-burns' | 'parallax' | 'pulse'>('ken-burns');
   const [pageBackgroundAnimationDuration, setPageBackgroundAnimationDuration] = useState(10);
   const [savingPage, setSavingPage] = useState(false);
+  const [pagePropertiesChanged, setPagePropertiesChanged] = useState(false);
+  const [originalPageProperties, setOriginalPageProperties] = useState<string>('{}');
 
   // Mechanics editor state
   const [mechanics, setMechanics] = useState<MechanicInstance[]>([]);
@@ -133,7 +142,18 @@ export default function AssetEditorPage() {
     startPosY: number;
     direction: 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
   } | null>(null);
+  const [zoom, setZoom] = useState(100);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+  // Complex component editors state
+  const [editingAccordion, setEditingAccordion] = useState<string | null>(null);
+  const [editingTabs, setEditingTabs] = useState<string | null>(null);
+  const [editingGrid, setEditingGrid] = useState<string | null>(null);
+  const [editingLogoGrid, setEditingLogoGrid] = useState<string | null>(null);
 
   const selectedMechanic = mechanics.find(m => m.id === selectedMechanicId);
 
@@ -149,8 +169,9 @@ export default function AssetEditorPage() {
 
       // Handle resizing
       if (resizingMechanic) {
-        const deltaX = e.clientX - resizingMechanic.startX;
-        const deltaY = e.clientY - resizingMechanic.startY;
+        const scale = zoom / 100;
+        const deltaX = (e.clientX - resizingMechanic.startX) / scale;
+        const deltaY = (e.clientY - resizingMechanic.startY) / scale;
         
         let newWidth = resizingMechanic.startWidth;
         let newHeight = resizingMechanic.startHeight;
@@ -188,8 +209,9 @@ export default function AssetEditorPage() {
 
       // Handle dragging
       if (draggingMechanicId) {
-        const x = Math.max(0, Math.min(e.clientX - rect.left - dragOffset.x, rect.width - 50));
-        const y = Math.max(0, Math.min(e.clientY - rect.top - dragOffset.y, rect.height - 50));
+        const scale = zoom / 100;
+        const x = Math.max(0, Math.min((e.clientX - rect.left) / scale - dragOffset.x, rect.width / scale - 50));
+        const y = Math.max(0, Math.min((e.clientY - rect.top) / scale - dragOffset.y, rect.height / scale - 50));
 
         setMechanics(prev => prev.map(m =>
           m.id === draggingMechanicId ? { ...m, x, y } : m
@@ -210,12 +232,122 @@ export default function AssetEditorPage() {
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
     };
-  }, [draggingMechanicId, resizingMechanic, dragOffset, mechanics]);
+  }, [draggingMechanicId, resizingMechanic, dragOffset, mechanics, zoom]);
+
+  // Show loading overlay immediately on mount
+  useEffect(() => {
+    showLoading();
+    setProgress(0);
+  }, []);
 
   useEffect(() => {
-    loadAsset();
-    loadPages();
+    loadAssetAndPages();
   }, [assetId]);
+
+  // Auto-fit zoom when page is selected
+  useEffect(() => {
+    if (selectedPage && viewMode === 'page-editor' && canvasContainerRef.current) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        handleZoomFit();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedPage?.id, viewMode]);
+
+  // Track page properties changes
+  useEffect(() => {
+    if (!selectedPage || originalPageProperties === '{}') return;
+
+    const currentProps = {
+      title: pageTitle,
+      slug: pageSlug,
+      status: pageStatus,
+      transition_type: pageTransitionType,
+      transition_duration: pageTransitionDuration,
+      canvas_background_color: pageBackgroundColor,
+      background_type: pageBackgroundType,
+      background_gradient_type: pageBackgroundGradientType,
+      background_gradient_colors: pageBackgroundGradientColors,
+      background_gradient_angle: pageBackgroundGradientAngle,
+      background_image_url: pageBackgroundImageUrl,
+      background_image_size: pageBackgroundImageSize,
+      background_image_position: pageBackgroundImagePosition,
+      background_animation_type: pageBackgroundAnimationType,
+      background_animation_duration: pageBackgroundAnimationDuration,
+    };
+
+    const hasChanged = JSON.stringify(currentProps) !== originalPageProperties;
+    setPagePropertiesChanged(hasChanged);
+  }, [
+    pageTitle, pageSlug, pageStatus, pageTransitionType, pageTransitionDuration,
+    pageBackgroundColor, pageBackgroundType, pageBackgroundGradientType,
+    pageBackgroundGradientColors, pageBackgroundGradientAngle, pageBackgroundImageUrl,
+    pageBackgroundImageSize, pageBackgroundImagePosition, pageBackgroundAnimationType,
+    pageBackgroundAnimationDuration, originalPageProperties, selectedPage
+  ]);
+
+  const loadAssetAndPages = async () => {
+    setLoading(true);
+    
+    // Smooth progress animation
+    const smoothProgress = async () => {
+      for (let i = 10; i <= 40; i += 2) {
+        setProgress(i);
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    };
+    smoothProgress();
+    
+    try {
+      // Load both asset and pages in parallel
+      setProgress(45);
+      const [assetRes, pagesRes] = await Promise.all([
+        fetch(`/api/assets/${assetId}`),
+        fetch(`/api/assets/${assetId}/pages`)
+      ]);
+
+      setProgress(60);
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Handle asset data
+      if (!assetRes.ok) throw new Error('Failed to load asset');
+      const assetData = await assetRes.json();
+      const asset = assetData.asset;
+      setAsset(asset);
+      setTitle(asset.title);
+      setSlug(asset.slug);
+      setDescription(asset.description || '');
+      setStatus(asset.status);
+      setCanvasBackgroundColor(asset.canvas_background_color || '#ffffff');
+      setCanvasTextColor(asset.canvas_text_color || '#000000');
+
+      setProgress(75);
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Handle pages data
+      if (pagesRes.ok) {
+        const pagesData = await pagesRes.json();
+        setPages(pagesData.pages || []);
+      } else {
+        setPages([]);
+      }
+
+      setProgress(90);
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } catch (err) {
+      setError('Failed to load asset');
+      console.error('Load error:', err);
+    } finally {
+      setLoading(false);
+      // Set to 100% and let hideLoading handle the pause
+      setProgress(100);
+      // Small delay to ensure progress updates, then hide (which pauses for 2s)
+      setTimeout(() => {
+        hideLoading();
+      }, 200);
+    }
+  };
 
   const loadAsset = async () => {
     try {
@@ -232,8 +364,6 @@ export default function AssetEditorPage() {
       setCanvasTextColor(assetData.canvas_text_color || '#000000');
     } catch (err) {
       setError('Failed to load asset');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -278,6 +408,55 @@ export default function AssetEditorPage() {
       setError(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleGlobalBackgroundColorChange = async (newColor: string) => {
+    // Update the state immediately for preview
+    setCanvasBackgroundColor(newColor);
+
+    // Check if there are pages to update
+    if (pages.length === 0) {
+      return; // No pages, just update the asset setting
+    }
+
+    // Prompt user to confirm applying to all pages
+    const confirmed = await confirm({
+      title: 'Apply Background Color to All Pages?',
+      description: `Do you want to apply the color ${newColor} to all ${pages.length} page(s)? You can still change individual page backgrounds later.`,
+      confirmText: 'Apply to All Pages',
+      cancelText: 'Just Asset Setting',
+      variant: 'warning',
+    });
+
+    if (confirmed) {
+      // Update all pages with the new background color
+      try {
+        const updatePromises = pages.map(page =>
+          fetch(`/api/pages/${page.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              canvas_background_color: newColor,
+              background_type: 'colour',
+            }),
+          })
+        );
+
+        await Promise.all(updatePromises);
+        
+        // Reload pages to reflect the changes
+        await loadPages();
+        
+        // If a page is currently selected, update its background color in the state
+        if (selectedPage) {
+          setPageBackgroundColor(newColor);
+          setPageBackgroundType('colour');
+        }
+      } catch (err) {
+        console.error('Failed to update pages:', err);
+        setError('Failed to apply background color to all pages');
+      }
     }
   };
 
@@ -371,6 +550,27 @@ export default function AssetEditorPage() {
     setPageBackgroundAnimationType(page.background_animation_type || 'ken-burns');
     setPageBackgroundAnimationDuration(page.background_animation_duration || 10);
     
+    // Capture original page properties for change tracking
+    const pageProps = {
+      title: page.title,
+      slug: page.slug,
+      status: page.status || 'draft',
+      transition_type: page.transition_type || 'fade',
+      transition_duration: page.transition_duration || 300,
+      canvas_background_color: page.canvas_background_color || '',
+      background_type: page.background_type || 'colour',
+      background_gradient_type: page.background_gradient_type || 'linear',
+      background_gradient_colors: page.background_gradient_colors || '#000000,#ffffff',
+      background_gradient_angle: page.background_gradient_angle || 180,
+      background_image_url: page.background_image_url || '',
+      background_image_size: page.background_image_size || 'cover',
+      background_image_position: page.background_image_position || 'center',
+      background_animation_type: page.background_animation_type || 'ken-burns',
+      background_animation_duration: page.background_animation_duration || 10,
+    };
+    setOriginalPageProperties(JSON.stringify(pageProps));
+    setPagePropertiesChanged(false);
+    
     // Load mechanics
     if (page.mechanics) {
       try {
@@ -436,6 +636,21 @@ export default function AssetEditorPage() {
   const handleSavePageProperties = async () => {
     if (!selectedPage) return;
 
+    // Show confirmation dialog if properties have changed
+    if (pagePropertiesChanged) {
+      const confirmed = await confirm({
+        title: 'Save Page Properties?',
+        description: 'Are you sure you want to save these changes to the page properties?',
+        confirmText: 'Save Changes',
+        cancelText: 'Cancel',
+        variant: 'default',
+      });
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
     setSavingPage(true);
     setError('');
 
@@ -470,6 +685,27 @@ export default function AssetEditorPage() {
       const data = await res.json();
       setSelectedPage(data.page);
       await loadPages();
+      
+      // Update original properties and reset changed flag
+      const pageProps = {
+        title: pageTitle,
+        slug: pageSlug,
+        status: pageStatus,
+        transition_type: pageTransitionType,
+        transition_duration: pageTransitionDuration,
+        canvas_background_color: pageBackgroundColor || '',
+        background_type: pageBackgroundType,
+        background_gradient_type: pageBackgroundGradientType,
+        background_gradient_colors: pageBackgroundGradientColors,
+        background_gradient_angle: pageBackgroundGradientAngle,
+        background_image_url: pageBackgroundImageUrl || '',
+        background_image_size: pageBackgroundImageSize,
+        background_image_position: pageBackgroundImagePosition,
+        background_animation_type: pageBackgroundAnimationType,
+        background_animation_duration: pageBackgroundAnimationDuration,
+      };
+      setOriginalPageProperties(JSON.stringify(pageProps));
+      setPagePropertiesChanged(false);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -563,8 +799,9 @@ export default function AssetEditorPage() {
 
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const scale = zoom / 100;
+    const mouseX = (e.clientX - rect.left) / scale;
+    const mouseY = (e.clientY - rect.top) / scale;
 
     setDraggingMechanicId(mechanicId);
     setSelectedMechanicId(mechanicId);
@@ -627,6 +864,59 @@ export default function AssetEditorPage() {
     // Keeping for backwards compatibility
   };
 
+  const handleZoomIn = () => {
+    setZoom(prev => Math.min(prev + 25, 200));
+  };
+
+  const handleZoomOut = () => {
+    setZoom(prev => Math.max(prev - 25, 25));
+  };
+
+  const handleZoomFit = () => {
+    if (!canvasRef.current || !canvasContainerRef.current) return;
+    const container = canvasContainerRef.current;
+    const canvas = canvasRef.current;
+    
+    const containerWidth = container.clientWidth - 64;
+    const containerHeight = container.clientHeight - 64;
+    const canvasWidth = canvas.offsetWidth;
+    const canvasHeight = canvas.offsetHeight;
+    
+    const scaleX = (containerWidth / canvasWidth) * 100;
+    const scaleY = (containerHeight / canvasHeight) * 100;
+    
+    setZoom(Math.floor(Math.min(scaleX, scaleY)));
+    setPanOffset({ x: 0, y: 0 });
+  };
+
+  const getCanvasBackgroundStyle = () => {
+    const style: React.CSSProperties = {};
+    
+    if (pageBackgroundType === 'colour') {
+      style.backgroundColor = pageBackgroundColor || '#000000';
+    } else if (pageBackgroundType === 'gradient') {
+      const colors = pageBackgroundGradientColors.split(',').map(c => c.trim());
+      if (pageBackgroundGradientType === 'linear') {
+        style.backgroundImage = `linear-gradient(${pageBackgroundGradientAngle}deg, ${colors.join(', ')})`;
+      } else {
+        style.backgroundImage = `radial-gradient(circle, ${colors.join(', ')})`;
+      }
+    } else if (pageBackgroundType === 'image' || pageBackgroundType === 'animated-image') {
+      if (pageBackgroundImageUrl) {
+        style.backgroundImage = `url(${pageBackgroundImageUrl})`;
+        style.backgroundSize = pageBackgroundImageSize;
+        style.backgroundPosition = pageBackgroundImagePosition;
+        style.backgroundRepeat = 'no-repeat';
+      } else {
+        style.backgroundColor = '#000000';
+      }
+    } else {
+      style.backgroundColor = '#18181b'; // zinc-900 default
+    }
+    
+    return style;
+  };
+
   const handleSaveMechanics = async () => {
     if (!selectedPage) return;
 
@@ -686,11 +976,22 @@ export default function AssetEditorPage() {
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div>
-            <h1 className="text-xl font-semibold">{asset.title}</h1>
-            <p className="text-sm text-zinc-500">
-              {selectedPage ? `Editing: ${selectedPage.title}` : `/${asset.slug}`}
-            </p>
+          <div className="flex items-center gap-2">
+            <div>
+              <h1 className="text-xl font-semibold">{asset.title}</h1>
+              <p className="text-sm text-zinc-500">
+                {selectedPage ? `Editing: ${selectedPage.title}` : `/${asset.slug}`}
+              </p>
+            </div>
+            {viewMode === 'page-editor' && (
+              <button
+                onClick={() => setViewMode('asset')}
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors"
+                title="Asset Properties"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </div>
         
@@ -747,11 +1048,47 @@ export default function AssetEditorPage() {
 
       {/* Mechanics Toolbar */}
       {viewMode === 'page-editor' && selectedPage && (
-        <div className="border-b border-zinc-800 bg-zinc-900/50 flex-shrink-0">
-          <MechanicsToolbar 
-            onAddMechanic={(type) => handleAddMechanic(type, 100, 100)}
-          />
-        </div>
+        <>
+          <div className="border-b border-zinc-800 bg-zinc-900/50 flex-shrink-0">
+            <MechanicsToolbar 
+              onAddMechanic={(type) => handleAddMechanic(type, 100, 100)}
+            />
+          </div>
+          
+          {/* Zoom Controls */}
+          <div className="h-10 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-4 flex-shrink-0">
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-zinc-400">Zoom:</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleZoomOut}
+                  className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white"
+                  title="Zoom Out"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </button>
+                <span className="text-sm font-mono w-12 text-center">{zoom}%</span>
+                <button
+                  onClick={handleZoomIn}
+                  className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white"
+                  title="Zoom In"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleZoomFit}
+                  className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white ml-2"
+                  title="Fit to Screen"
+                >
+                  <Maximize2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="text-sm text-zinc-500">
+              Right-click + drag to pan
+            </div>
+          </div>
+        </>
       )}
 
       {/* Three-column layout */}
@@ -817,16 +1154,61 @@ export default function AssetEditorPage() {
         {/* Center panel */}
         {viewMode === 'page-editor' && selectedPage ? (
           /* Mechanics Canvas */
-          <div className="flex-1 bg-zinc-950 flex items-center justify-center p-8 overflow-hidden">
+          <div 
+            ref={canvasContainerRef}
+            className="flex-1 bg-zinc-950 overflow-hidden relative"
+            onContextMenu={(e) => e.preventDefault()}
+            onMouseDown={(e) => {
+              if (e.button === 2) {
+                e.preventDefault();
+                setIsPanning(true);
+                setPanStart({ x: e.clientX, y: e.clientY });
+              }
+            }}
+            onMouseMove={(e) => {
+              if (isPanning) {
+                const deltaX = e.clientX - panStart.x;
+                const deltaY = e.clientY - panStart.y;
+                setPanOffset({
+                  x: panOffset.x + deltaX,
+                  y: panOffset.y + deltaY,
+                });
+                setPanStart({ x: e.clientX, y: e.clientY });
+              }
+            }}
+            onMouseUp={() => {
+              if (isPanning) setIsPanning(false);
+            }}
+            onWheel={(e) => {
+              e.preventDefault();
+              const delta = e.deltaY > 0 ? -5 : 5;
+              setZoom(prev => Math.max(25, Math.min(200, prev + delta)));
+            }}
+            style={{ cursor: isPanning ? 'grabbing' : 'default' }}
+          >
             <div 
-              ref={canvasRef}
-              onClick={handleCanvasClick}
-              className="relative w-full max-w-[1200px] bg-zinc-900 border-2 border-zinc-800 rounded-lg overflow-hidden select-none"
-              style={{ 
-                aspectRatio: '16/9',
-                cursor: draggingMechanicId ? 'move' : resizingMechanic ? `${resizingMechanic.direction}-resize` : 'default'
+              className="absolute inset-0 flex items-center justify-center p-8"
+              style={{
+                transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
               }}
             >
+              <div 
+                ref={canvasRef}
+                onClick={handleCanvasClick}
+                className="relative border-2 border-zinc-800 rounded-lg overflow-hidden select-none"
+                style={{ 
+                  ...getCanvasBackgroundStyle(),
+                  width: '1920px !important' as any,
+                  height: '1080px !important' as any,
+                  minWidth: '1920px',
+                  maxWidth: '1920px',
+                  minHeight: '1080px',
+                  maxHeight: '1080px',
+                  transform: `scale(${zoom / 100})`,
+                  transformOrigin: 'center',
+                  cursor: draggingMechanicId ? 'move' : resizingMechanic ? `${resizingMechanic.direction}-resize` : 'default'
+                }}
+              >
               {mechanics.length === 0 ? (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
@@ -922,6 +1304,7 @@ export default function AssetEditorPage() {
                   })()}
                 </>
               )}
+            </div>
             </div>
           </div>
         ) : viewMode === 'page-properties' && selectedPage ? (
@@ -1335,50 +1718,21 @@ export default function AssetEditorPage() {
 
                   {/* Canvas Colors */}
                   <div className="border-t border-zinc-800 pt-6">
-                    <h3 className="text-sm font-medium mb-4">Canvas Colors</h3>
+                    <h3 className="text-sm font-medium mb-4">Global Background Color</h3>
+                    <p className="text-xs text-zinc-500 mb-4">Changes will prompt to apply to all pages</p>
                     
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm mb-2">Background</label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={canvasBackgroundColor}
-                            onChange={(e) => setCanvasBackgroundColor(e.target.value)}
-                            className="w-10 h-10 rounded cursor-pointer"
-                          />
-                          <input
-                            type="text"
-                            value={canvasBackgroundColor}
-                            onChange={(e) => setCanvasBackgroundColor(e.target.value)}
-                            className="flex-1 px-2 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white text-sm font-mono"
-                          />
-                        </div>
-                        {!isValidHexColor(canvasBackgroundColor) && (
-                          <p className="text-xs text-red-400 mt-1">Invalid hex</p>
-                        )}
-                      </div>
+                      <ColorPicker
+                        label="Background"
+                        value={canvasBackgroundColor}
+                        onChange={handleGlobalBackgroundColorChange}
+                      />
 
-                      <div>
-                        <label className="block text-sm mb-2">Text</label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={canvasTextColor}
-                            onChange={(e) => setCanvasTextColor(e.target.value)}
-                            className="w-10 h-10 rounded cursor-pointer"
-                          />
-                          <input
-                            type="text"
-                            value={canvasTextColor}
-                            onChange={(e) => setCanvasTextColor(e.target.value)}
-                            className="flex-1 px-2 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white text-sm font-mono"
-                          />
-                        </div>
-                        {!isValidHexColor(canvasTextColor) && (
-                          <p className="text-xs text-red-400 mt-1">Invalid hex</p>
-                        )}
-                      </div>
+                      <ColorPicker
+                        label="Text"
+                        value={canvasTextColor}
+                        onChange={setCanvasTextColor}
+                      />
                     </div>
 
                     {/* Compact Color Preview */}
@@ -1473,24 +1827,11 @@ export default function AssetEditorPage() {
 
                       {/* Colour Configuration */}
                       {pageBackgroundType === 'colour' && (
-                        <div className="space-y-2">
-                          <label className="block text-xs font-medium">Color</label>
-                          <div className="flex gap-2">
-                            <input
-                              type="color"
-                              value={pageBackgroundColor || canvasBackgroundColor}
-                              onChange={(e) => setPageBackgroundColor(e.target.value)}
-                              className="w-10 h-8 rounded cursor-pointer"
-                            />
-                            <input
-                              type="text"
-                              value={pageBackgroundColor}
-                              onChange={(e) => setPageBackgroundColor(e.target.value)}
-                              placeholder="Asset default"
-                              className="flex-1 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white text-sm font-mono"
-                            />
-                          </div>
-                        </div>
+                        <ColorPicker
+                          label="Color"
+                          value={pageBackgroundColor || canvasBackgroundColor}
+                          onChange={setPageBackgroundColor}
+                        />
                       )}
 
                       {/* Gradient Configuration */}
@@ -1773,8 +2114,8 @@ export default function AssetEditorPage() {
                       </div>
                     </div>
 
-                    {/* Mechanic-Specific Properties */}
-                    {selectedMechanic && (() => {
+                    {/* Mechanic-Specific Properties - Skip for complex components with dedicated editors */}
+                    {selectedMechanic && !['tabs', 'accordion', 'gridlayout', 'logogrid'].includes(selectedMechanic.type) && (() => {
                       const definition = getMechanic(selectedMechanic.type);
                       if (!definition) return null;
                       
@@ -1795,13 +2136,56 @@ export default function AssetEditorPage() {
                           </label>
                           
                           {propDef.type === 'text' && (
-                            <input
-                              type="text"
-                              value={selectedMechanic.props[propName] || ''}
-                              onChange={(e) => handleMechanicPropChange(propName, e.target.value)}
-                              placeholder={propDef.placeholder}
-                              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white"
-                            />
+                            // Special handling for Button actionValue
+                            selectedMechanic.type === 'button' && propName === 'actionValue' ? (
+                              // When action is "goto", show page dropdown
+                              selectedMechanic.props.action === 'goto' ? (
+                                <select
+                                  value={selectedMechanic.props[propName] || ''}
+                                  onChange={(e) => handleMechanicPropChange(propName, e.target.value)}
+                                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white"
+                                >
+                                  <option value="">Select a page</option>
+                                  {pages.filter(p => p.id !== selectedPage?.id).map(page => (
+                                    <option key={page.id} value={page.slug}>
+                                      {page.title} ({page.slug})
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : selectedMechanic.props.action === 'modal' ? (
+                                // When action is "modal", show modal dropdown (placeholder for now)
+                                <div className="space-y-2">
+                                  <select
+                                    value={selectedMechanic.props[propName] || ''}
+                                    onChange={(e) => handleMechanicPropChange(propName, e.target.value)}
+                                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white"
+                                  >
+                                    <option value="">Select a modal</option>
+                                    <option value="modal-1">Modal 1 (Coming Soon)</option>
+                                    <option value="modal-2">Modal 2 (Coming Soon)</option>
+                                  </select>
+                                  <p className="text-xs text-zinc-500">
+                                    Modal system will be implemented as workspace-level assets
+                                  </p>
+                                </div>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={selectedMechanic.props[propName] || ''}
+                                  onChange={(e) => handleMechanicPropChange(propName, e.target.value)}
+                                  placeholder={propDef.placeholder}
+                                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white"
+                                />
+                              )
+                            ) : (
+                              <input
+                                type="text"
+                                value={selectedMechanic.props[propName] || ''}
+                                onChange={(e) => handleMechanicPropChange(propName, e.target.value)}
+                                placeholder={propDef.placeholder}
+                                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white"
+                              />
+                            )
                           )}
                           
                           {propDef.type === 'textarea' && (
@@ -1827,20 +2211,10 @@ export default function AssetEditorPage() {
                           )}
                         
                         {propDef.type === 'color' && (
-                          <div className="flex gap-2">
-                            <input
-                              type="color"
-                              value={selectedMechanic.props[propName] || '#ffffff'}
-                              onChange={(e) => handleMechanicPropChange(propName, e.target.value)}
-                              className="w-12 h-10 rounded cursor-pointer"
-                            />
-                            <input
-                              type="text"
-                              value={selectedMechanic.props[propName] || '#ffffff'}
-                              onChange={(e) => handleMechanicPropChange(propName, e.target.value)}
-                              className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white font-mono text-sm"
-                            />
-                          </div>
+                          <ColorPicker
+                            value={selectedMechanic.props[propName] || '#ffffff'}
+                            onChange={(color) => handleMechanicPropChange(propName, color)}
+                          />
                         )}
                         
                         {propDef.type === 'select' && (
@@ -1891,9 +2265,32 @@ export default function AssetEditorPage() {
                         )}
                       </div>
                     ))}
+                  </>
+                )
+              })()}
 
                     {/* Custom Array Editors for Complex Components */}
-                    {selectedMechanic.type === 'tabs' && (
+                    {(selectedMechanic.type === 'tabs' || selectedMechanic.type === 'accordion' || selectedMechanic.type === 'gridlayout' || selectedMechanic.type === 'logogrid') && (
+                      <div className="pt-4 mt-4 border-t border-zinc-800">
+                        <button
+                          onClick={() => {
+                            if (selectedMechanic.type === 'tabs') setEditingTabs(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'accordion') setEditingAccordion(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'gridlayout') setEditingGrid(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'logogrid') setEditingLogoGrid(selectedMechanic.id);
+                          }}
+                          className="w-full px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-medium"
+                        >
+                          <Settings className="w-4 h-4" />
+                          Edit {selectedMechanic.type === 'tabs' ? 'Tabs' : selectedMechanic.type === 'accordion' ? 'Accordion' : selectedMechanic.type === 'gridlayout' ? 'Grid Layout' : 'Logo Grid'}
+                        </button>
+                        <p className="text-xs text-zinc-500 mt-2 text-center">
+                          Opens a dedicated editor for managing {selectedMechanic.type === 'tabs' ? 'tab' : selectedMechanic.type === 'accordion' ? 'accordion' : selectedMechanic.type === 'gridlayout' ? 'grid' : 'logo'} items
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedMechanic.type === 'tabs_OLD_INLINE_EDITOR' && (
                       <div className="pt-4 mt-4 border-t border-zinc-800">
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wide">Tab Items</h3>
@@ -1954,7 +2351,7 @@ export default function AssetEditorPage() {
                       </div>
                     )}
 
-                    {selectedMechanic.type === 'accordion' && (
+                    {selectedMechanic.type === 'accordion_OLD_INLINE_EDITOR' && (
                       <div className="pt-4 mt-4 border-t border-zinc-800">
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wide">Accordion Items</h3>
@@ -2015,7 +2412,7 @@ export default function AssetEditorPage() {
                       </div>
                     )}
 
-                    {selectedMechanic.type === 'gridlayout' && (
+                    {selectedMechanic.type === 'gridlayout_OLD_INLINE_EDITOR' && (
                       <div className="pt-4 mt-4 border-t border-zinc-800">
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wide">Grid Items</h3>
@@ -2092,9 +2489,6 @@ export default function AssetEditorPage() {
                         </div>
                       </div>
                     )}
-                        </>
-                      );
-                  })()}
                   </div>
                 </div>
               ) : null}
@@ -2106,6 +2500,120 @@ export default function AssetEditorPage() {
 
       <ConfirmDialog />
       <UnsavedDialog />
+
+      {/* Complex Component Editors */}
+      {editingAccordion && selectedMechanic && selectedMechanic.type === 'accordion' && (
+        <AccordionEditor
+          sections={(selectedMechanic.props.items || []).map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            mechanics: [] // TODO: Load mechanics if stored
+          }))}
+          onSave={(sections) => {
+            handleMechanicPropChange('items', sections.map(s => ({
+              id: s.id,
+              title: s.title,
+              content: '' // This will be replaced by mechanics
+            })));
+            setEditingAccordion(null);
+          }}
+          onClose={() => setEditingAccordion(null)}
+        />
+      )}
+
+      {editingTabs && selectedMechanic && selectedMechanic.type === 'tabs' && (
+        <TabsEditor
+          tabs={(selectedMechanic.props.tabs || []).map((tab: any) => ({
+            id: tab.id,
+            label: tab.label,
+            mechanics: tab.mechanics || []
+          }))}
+          settings={{
+            backgroundColor: selectedMechanic.props.backgroundColor,
+            pageWidth: selectedMechanic.props.pageWidth || 1200,
+            pageHeight: selectedMechanic.props.pageHeight || 800,
+            tabBarBackgroundColor: selectedMechanic.props.tabBarBackgroundColor,
+            tabStyle: selectedMechanic.props.tabStyle,
+            tabPosition: selectedMechanic.props.tabPosition,
+            activeColor: selectedMechanic.props.activeColor,
+            inactiveColor: selectedMechanic.props.inactiveColor,
+            textColor: selectedMechanic.props.textColor,
+            borderColor: selectedMechanic.props.borderColor,
+            tabSpacing: selectedMechanic.props.tabSpacing,
+          }}
+          onSave={(tabs, settings) => {
+            // Update all properties at once to avoid state batching issues
+            if (!selectedMechanicId) return;
+            
+            setMechanics(mechanics.map(m => 
+              m.id === selectedMechanicId 
+                ? { 
+                    ...m, 
+                    props: { 
+                      ...m.props,
+                      tabs: tabs.map(t => ({
+                        id: t.id,
+                        label: t.label,
+                        mechanics: t.mechanics
+                      })),
+                      backgroundColor: settings.backgroundColor,
+                      tabBarBackgroundColor: settings.tabBarBackgroundColor,
+                      pageWidth: settings.pageWidth,
+                      pageHeight: settings.pageHeight,
+                      tabStyle: settings.tabStyle,
+                      tabPosition: settings.tabPosition,
+                      activeColor: settings.activeColor,
+                      inactiveColor: settings.inactiveColor,
+                      textColor: settings.textColor,
+                      borderColor: settings.borderColor,
+                      tabSpacing: settings.tabSpacing,
+                    } 
+                  }
+                : m
+            ));
+            setMechanicsChanged(true);
+            setEditingTabs(null);
+          }}
+          onClose={() => setEditingTabs(null)}
+        />
+      )}
+
+      {editingGrid && selectedMechanic && selectedMechanic.type === 'gridlayout' && (
+        <GridEditor
+          items={(selectedMechanic.props.items || []).map((item: any) => ({
+            id: item.id,
+            name: item.content || `Item ${item.id}`,
+            mechanics: []
+          }))}
+          onSave={(items) => {
+            handleMechanicPropChange('items', items.map(i => ({
+              id: i.id,
+              content: i.name,
+              backgroundColor: '#f3f4f6',
+              textColor: '#1f2937'
+            })));
+            setEditingGrid(null);
+          }}
+          onClose={() => setEditingGrid(null)}
+        />
+      )}
+
+      {editingLogoGrid && selectedMechanic && selectedMechanic.type === 'logogrid' && (
+        <LogoGridEditor
+          logos={(() => {
+            try {
+              return JSON.parse(selectedMechanic.props.logos || '[]');
+            } catch {
+              return [];
+            }
+          })()}
+          onSave={(logos) => {
+            handleMechanicPropChange('logos', JSON.stringify(logos));
+            setEditingLogoGrid(null);
+          }}
+          onClose={() => setEditingLogoGrid(null)}
+        />
+      )}
     </div>
   );
 }

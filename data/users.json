@@ -1,0 +1,11 @@
+[
+  {
+    "id": "admin-default",
+    "email": "admin@fis.com",
+    "password": "$2b$10$xCzCghk0jcZvg0FoKTY4NuXhgAvCLpnuCsk3qSlHdBtqGSMp1bhZO",
+    "name": "Admin User",
+    "role": "admin",
+    "created_at": 1710316800,
+    "updated_at": 1710316800
+  }
+]

@@ -1,11 +1,25 @@
 'use client'
 
 import { useState } from 'react'
+import { MechanicRenderer } from '@/components/mechanics/MechanicRenderer'
+
+interface MechanicInstance {
+  id: string
+  type: string
+  name: string
+  x: number
+  y: number
+  width?: number
+  height?: number
+  layer: number
+  props: Record<string, any>
+}
 
 interface TabItem {
   id: string
   label: string
-  content: string
+  content?: string
+  mechanics?: MechanicInstance[]
 }
 
 interface TabsProps {
@@ -17,6 +31,7 @@ interface TabsProps {
   activeColor?: string
   inactiveColor?: string
   backgroundColor?: string
+  tabBarBackgroundColor?: string
   textColor?: string
   borderColor?: string
   tabSpacing?: number
@@ -24,14 +39,16 @@ interface TabsProps {
   animateTransition?: boolean
   width?: number
   height?: number
+  pageWidth?: number
+  pageHeight?: number
 }
 
 export function Tabs({
   mode = 'view',
   tabs = [
-    { id: '1', label: 'Tab 1', content: 'Content for tab 1' },
-    { id: '2', label: 'Tab 2', content: 'Content for tab 2' },
-    { id: '3', label: 'Tab 3', content: 'Content for tab 3' }
+    { id: '1', label: 'Tab 1', content: 'Content for tab 1', mechanics: [] },
+    { id: '2', label: 'Tab 2', content: 'Content for tab 2', mechanics: [] },
+    { id: '3', label: 'Tab 3', content: 'Content for tab 3', mechanics: [] }
   ],
   defaultTab = 0,
   tabStyle = 'underline',
@@ -39,13 +56,16 @@ export function Tabs({
   activeColor = '#3b82f6',
   inactiveColor = '#64748b',
   backgroundColor = '#ffffff',
+  tabBarBackgroundColor = '#f3f4f6',
   textColor = '#1f2937',
   borderColor = '#e5e7eb',
   tabSpacing = 8,
   contentPadding = 16,
   animateTransition = true,
   width,
-  height
+  height,
+  pageWidth = 1200,
+  pageHeight = 800
 }: TabsProps) {
   const [activeTab, setActiveTab] = useState(defaultTab)
 
@@ -87,7 +107,7 @@ export function Tabs({
       case 'minimal':
         return {
           ...baseStyle,
-          color: isActive ? textColor : inactiveColor,
+          color: isActive ? activeColor : inactiveColor,
           fontWeight: isActive ? 700 : 400,
           marginRight: isHorizontal ? `${tabSpacing * 2}px` : '0',
           marginBottom: !isHorizontal ? `${tabSpacing}px` : '0'
@@ -96,6 +116,7 @@ export function Tabs({
       default:
         return {
           ...baseStyle,
+          color: isActive ? activeColor : inactiveColor,
           borderBottom: isHorizontal ? `3px solid ${isActive ? activeColor : 'transparent'}` : 'none',
           borderLeft: !isHorizontal ? `3px solid ${isActive ? activeColor : 'transparent'}` : 'none',
           marginRight: isHorizontal ? `${tabSpacing}px` : '0',
@@ -109,7 +130,6 @@ export function Tabs({
     height: height || 'auto',
     display: 'flex',
     flexDirection: (isHorizontal ? 'column' : 'row') as 'column' | 'row',
-    backgroundColor,
     borderRadius: '8px',
     overflow: 'hidden'
   }
@@ -117,15 +137,17 @@ export function Tabs({
   const tabListStyle = {
     display: 'flex',
     flexDirection: (isHorizontal ? 'row' : 'column') as 'row' | 'column',
-    borderBottom: isHorizontal && tabStyle === 'underline' ? `1px solid ${borderColor}` : 'none',
-    borderRight: !isHorizontal && tabStyle === 'underline' ? `1px solid ${borderColor}` : 'none',
+    borderBottom: isHorizontal && tabStyle === 'underline' ? `2px solid ${borderColor}` : 'none',
+    borderRight: !isHorizontal && tabStyle === 'underline' ? `2px solid ${borderColor}` : 'none',
     padding: `${tabSpacing}px`,
+    backgroundColor: tabBarBackgroundColor,
     flexShrink: 0,
     order: tabPosition === 'bottom' || tabPosition === 'right' ? 2 : 1
   }
 
   const contentStyle = {
     padding: `${contentPadding}px`,
+    backgroundColor,
     color: textColor,
     flex: 1,
     overflow: 'auto',
@@ -147,7 +169,29 @@ export function Tabs({
           ))}
         </div>
         <div style={contentStyle}>
-          {tabs[activeTab]?.content || 'No content'}
+          {tabs[activeTab]?.mechanics && tabs[activeTab].mechanics!.length > 0 ? (
+            <div style={{ position: 'relative', width: `${pageWidth}px`, height: `${pageHeight}px` }}>
+              {tabs[activeTab].mechanics!.map((mechanic) => (
+                <div
+                  key={mechanic.id}
+                  style={{
+                    position: 'absolute',
+                    left: mechanic.x,
+                    top: mechanic.y,
+                    width: mechanic.width || 200,
+                    height: mechanic.height || 100,
+                  }}
+                >
+                  <MechanicRenderer
+                    mechanic={mechanic}
+                    mode="edit"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            tabs[activeTab]?.content || 'No content'
+          )}
         </div>
       </div>
     )
@@ -167,7 +211,29 @@ export function Tabs({
         ))}
       </div>
       <div style={contentStyle}>
-        {tabs[activeTab]?.content || 'No content'}
+        {tabs[activeTab]?.mechanics && tabs[activeTab].mechanics!.length > 0 ? (
+          <div style={{ position: 'relative', width: `${pageWidth}px`, height: `${pageHeight}px` }}>
+            {tabs[activeTab].mechanics!.map((mechanic) => (
+              <div
+                key={mechanic.id}
+                style={{
+                  position: 'absolute',
+                  left: mechanic.x,
+                  top: mechanic.y,
+                  width: mechanic.width || 200,
+                  height: mechanic.height || 100,
+                }}
+              >
+                <MechanicRenderer
+                  mechanic={mechanic}
+                  mode="view"
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          tabs[activeTab]?.content || 'No content'
+        )}
       </div>
     </div>
   )

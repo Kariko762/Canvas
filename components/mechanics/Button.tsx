@@ -2,7 +2,7 @@
 
 interface ButtonProps {
   text?: string
-  action?: 'next' | 'prev' | 'goto' | 'link'
+  action?: 'next' | 'prev' | 'goto' | 'link' | 'modal'
   actionValue?: string
   backgroundColor?: string
   textColor?: string
@@ -54,6 +54,12 @@ export function Button({
       case 'link':
         if (actionValue) {
           window.open(actionValue, '_blank')
+        }
+        break
+      case 'modal':
+        if (actionValue) {
+          // Open modal - will be handled by modal system
+          console.log('Open modal:', actionValue)
         }
         break
     }

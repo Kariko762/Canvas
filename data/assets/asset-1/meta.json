@@ -1,0 +1,13 @@
+{
+  "id": "asset-1",
+  "workspace_id": "ws-default",
+  "title": "New Asset",
+  "slug": "first-asset",
+  "description": "Description for my first asset",
+  "status": "draft",
+  "canvas_background_color": "#1D1F48",
+  "canvas_text_color": "#ffffff",
+  "created_by": "admin-default",
+  "created_at": 1773383329,
+  "updated_at": 1773597054
+}

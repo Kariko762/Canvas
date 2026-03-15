@@ -1,0 +1,13 @@
+{
+  "id": "asset-2",
+  "workspace_id": "ws-default",
+  "title": "Second Asset",
+  "slug": "second-asset",
+  "description": "This is my second asset",
+  "status": "draft",
+  "canvas_background_color": "#ff0000",
+  "canvas_text_color": "#ffffff",
+  "created_by": "admin-default",
+  "created_at": 1773383587,
+  "updated_at": 1773383587
+}
