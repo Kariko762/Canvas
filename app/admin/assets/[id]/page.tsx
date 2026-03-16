@@ -7,8 +7,9 @@ import Link from 'next/link';
 import { nanoid } from 'nanoid';
 import { useConfirm } from '@/components/ui/useConfirm';
 import { useUnsavedChanges } from '@/components/ui/useUnsavedChanges';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { CircularLoader } from '@/components/ui/CircularLoader';
 import { ColorPicker } from '@/components/ui/ColorPicker';
+import { PublishModal } from '@/components/ui/PublishModal';
 import { MechanicRenderer } from '@/components/mechanics/MechanicRenderer';
 import { LayerPanel } from '@/components/editor/LayerPanel';
 import { MechanicsToolbar } from '@/components/editor/MechanicsToolbar';
@@ -44,7 +45,7 @@ interface Page {
   title: string;
   slug: string;
   order: number;
-  status: 'draft' | 'published';
+  status: 'draft' | 'qa' | 'complete';
   transition_type?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down';
   transition_duration?: number;
   canvas_background_color?: string;
@@ -106,7 +107,7 @@ export default function AssetEditorPage() {
   // Page properties state
   const [pageTitle, setPageTitle] = useState('');
   const [pageSlug, setPageSlug] = useState('');
-  const [pageStatus, setPageStatus] = useState<'draft' | 'published'>('draft');
+  const [pageStatus, setPageStatus] = useState<'draft' | 'qa' | 'complete'>('draft');
   const [pageTransitionType, setPageTransitionType] = useState<'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down'>('fade');
   const [pageTransitionDuration, setPageTransitionDuration] = useState(300);
   const [pageBackgroundColor, setPageBackgroundColor] = useState('');
@@ -152,8 +153,12 @@ export default function AssetEditorPage() {
   // Complex component editors state
   const [editingAccordion, setEditingAccordion] = useState<string | null>(null);
   const [editingTabs, setEditingTabs] = useState<string | null>(null);
+
+  // Available modals for linking
+  const [availableModals, setAvailableModals] = useState<Array<{ id: string; title: string; slug: string }>>([]);
   const [editingGrid, setEditingGrid] = useState<string | null>(null);
   const [editingLogoGrid, setEditingLogoGrid] = useState<string | null>(null);
+  const [showPublishModal, setShowPublishModal] = useState(false);
 
   const selectedMechanic = mechanics.find(m => m.id === selectedMechanicId);
 
@@ -236,7 +241,7 @@ export default function AssetEditorPage() {
 
   // Show loading overlay immediately on mount
   useEffect(() => {
-    showLoading();
+    showLoading(); // Uses TechLoader (default)
     setProgress(0);
   }, []);
 
@@ -286,6 +291,32 @@ export default function AssetEditorPage() {
     pageBackgroundImageSize, pageBackgroundImagePosition, pageBackgroundAnimationType,
     pageBackgroundAnimationDuration, originalPageProperties, selectedPage
   ]);
+
+  // Load available published modals for linking
+  useEffect(() => {
+    const loadModals = async () => {
+      if (!asset?.workspace_id) return;
+      
+      try {
+        const response = await fetch(`/api/modals?workspace_id=${asset.workspace_id}&status=published`, {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableModals(data.map((m: any) => ({
+            id: m.id,
+            title: m.title,
+            slug: m.slug
+          })));
+        }
+      } catch (err) {
+        console.error('Failed to load available modals:', err);
+      }
+    };
+    
+    loadModals();
+  }, [asset?.workspace_id]);
 
   const loadAssetAndPages = async () => {
     setLoading(true);
@@ -643,7 +674,7 @@ export default function AssetEditorPage() {
         description: 'Are you sure you want to save these changes to the page properties?',
         confirmText: 'Save Changes',
         cancelText: 'Cancel',
-        variant: 'default',
+        variant: 'info',
       });
 
       if (!confirmed) {
@@ -949,24 +980,133 @@ export default function AssetEditorPage() {
     }
   };
 
+  const handlePublish = async (publishAll: boolean) => {
+    setShowPublishModal(false);
+    setSaving(true);
+    setError('');
+
+    try {
+      if (publishAll) {
+        // Update all pages to complete status sequentially to avoid race conditions
+        console.log(`Updating ${pages.length} pages to complete status...`);
+        
+        for (const page of pages) {
+          const res = await fetch(`/api/pages/${page.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: 'complete',
+            }),
+          });
+          
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(`Failed to update page "${page.title}": ${data.error || 'Unknown error'}`);
+          }
+          
+          console.log(`Updated page "${page.title}" to complete`);
+        }
+        
+        console.log('All pages updated successfully');
+        await loadPages();
+      }
+
+      // Update asset status to published
+      const res = await fetch(`/api/assets/${assetId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          slug,
+          description,
+          status: 'published',
+          canvas_background_color: canvasBackgroundColor,
+          canvas_text_color: canvasTextColor,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to publish');
+      }
+
+      const data = await res.json();
+      setAsset(data.asset);
+      setStatus('published');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUnpublish = async () => {
+    const confirmed = await confirm({
+      title: 'Unpublish Asset',
+      description: 'Are you sure you want to unpublish this asset? It will no longer be publicly accessible.',
+      confirmText: 'Unpublish',
+      variant: 'warning',
+    });
+
+    if (!confirmed) return;
+
+    setSaving(true);
+    setError('');
+
+    try {
+      const res = await fetch(`/api/assets/${assetId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          slug,
+          description,
+          status: 'draft',
+          canvas_background_color: canvasBackgroundColor,
+          canvas_text_color: canvasTextColor,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to unpublish');
+      }
+
+      const data = await res.json();
+      setAsset(data.asset);
+      setStatus('draft');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const isValidHexColor = (color: string): boolean => {
     return /^#([0-9A-F]{3}){1,2}$/i.test(color);
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#09090b' }}>
+        <CircularLoader 
+          size={120}
+          message="Loading presentation..."
+        />
+      </div>
+    );
   }
 
   if (!asset) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#09090b' }}>
         <p className="text-zinc-400">Asset not found</p>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-zinc-950 text-white flex flex-col overflow-hidden">
+    <div className="h-screen text-white flex flex-col overflow-hidden" style={{ backgroundColor: '#09090b' }}>
       {/* Header */}
       <div className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">
@@ -1058,34 +1198,37 @@ export default function AssetEditorPage() {
           {/* Zoom Controls */}
           <div className="h-10 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-4 flex-shrink-0">
             <div className="flex items-center gap-4">
-              <span className="text-sm text-zinc-400">Zoom:</span>
               <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-500">Zoom:</span>
                 <button
                   onClick={handleZoomOut}
-                  className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white"
+                  className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition-colors"
                   title="Zoom Out"
                 >
-                  <ZoomOut className="w-4 h-4" />
+                  <ZoomOut className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-sm font-mono w-12 text-center">{zoom}%</span>
+                <span className="text-xs text-white w-10 text-center">{zoom}%</span>
                 <button
                   onClick={handleZoomIn}
-                  className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white"
+                  className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition-colors"
                   title="Zoom In"
                 >
-                  <ZoomIn className="w-4 h-4" />
+                  <ZoomIn className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={handleZoomFit}
-                  className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white ml-2"
+                  className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition-colors"
                   title="Fit to Screen"
                 >
-                  <Maximize2 className="w-4 h-4" />
+                  <Maximize2 className="w-3.5 h-3.5" />
                 </button>
               </div>
+              <div className="text-xs text-zinc-500">
+                Hold Right-Click to pan / Scroll to zoom in/out
+              </div>
             </div>
-            <div className="text-sm text-zinc-500">
-              Right-click + drag to pan
+            <div className="text-xs text-zinc-500">
+              {selectedPage?.canvas_width || 1920}×{selectedPage?.canvas_height || 1080}px
             </div>
           </div>
         </>
@@ -1123,9 +1266,18 @@ export default function AssetEditorPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1 flex items-center gap-2">
-                        <div>
+                        <div className="flex-1">
                           <div className="font-medium text-sm">{page.title}</div>
-                          <div className="text-xs text-zinc-500">/{page.slug}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="text-xs text-zinc-500">/{page.slug}</div>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                              page.status === 'complete' ? 'bg-green-500/20 text-green-400' :
+                              page.status === 'qa' ? 'bg-yellow-500/20 text-yellow-400' :
+                              'bg-zinc-700 text-zinc-400'
+                            }`}>
+                              {page.status === 'complete' ? 'Complete' : page.status === 'qa' ? 'QA' : 'Draft'}
+                            </span>
+                          </div>
                         </div>
                         {selectedPage?.id === page.id && mechanicsChanged && (
                           <span className="w-2 h-2 bg-yellow-500 rounded-full flex-shrink-0" title="Unsaved changes" />
@@ -1156,7 +1308,7 @@ export default function AssetEditorPage() {
           /* Mechanics Canvas */
           <div 
             ref={canvasContainerRef}
-            className="flex-1 bg-zinc-950 overflow-hidden relative"
+            className="flex-1 overflow-hidden relative"
             onContextMenu={(e) => e.preventDefault()}
             onMouseDown={(e) => {
               if (e.button === 2) {
@@ -1184,7 +1336,15 @@ export default function AssetEditorPage() {
               const delta = e.deltaY > 0 ? -5 : 5;
               setZoom(prev => Math.max(25, Math.min(200, prev + delta)));
             }}
-            style={{ cursor: isPanning ? 'grabbing' : 'default' }}
+            style={{
+              cursor: isPanning ? 'grabbing' : 'default',
+              backgroundColor: '#09090b',
+              backgroundImage: `
+                linear-gradient(rgba(75, 205, 62, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(75, 205, 62, 0.05) 1px, transparent 1px)
+              `,
+              backgroundSize: '20px 20px'
+            }}
           >
             <div 
               className="absolute inset-0 flex items-center justify-center p-8"
@@ -1358,8 +1518,12 @@ export default function AssetEditorPage() {
                       className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
                     >
                       <option value="draft">Draft</option>
-                      <option value="published">Published</option>
+                      <option value="qa">QA</option>
+                      <option value="complete">Complete</option>
                     </select>
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Draft: Edit mode only • QA: Edit + Preview • Complete: Edit + Preview + Live
+                    </p>
                   </div>
 
                   {/* Transition Settings */}
@@ -1700,20 +1864,41 @@ export default function AssetEditorPage() {
                     />
                   </div>
 
-                  {/* Status - Single Column */}
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Status - Read Only with Publish/Unpublish Button */}
+                  <div className="grid grid-cols-2 gap-4 items-end">
                     <div>
                       <label className="block text-sm font-medium mb-2">Status</label>
-                      <select
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value as any)}
-                        className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded focus:border-blue-600 focus:outline-none text-white"
-                      >
-                        <option value="draft">Draft</option>
-                        <option value="published">Published</option>
-                        <option value="archived">Archived</option>
-                      </select>
+                      <input
+                        type="text"
+                        value={status.charAt(0).toUpperCase() + status.slice(1)}
+                        readOnly
+                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-400 cursor-not-allowed"
+                      />
                     </div>
+                    {/* Publish Button (only for draft) */}
+                    {status === 'draft' && (
+                      <div>
+                        <button
+                          onClick={() => setShowPublishModal(true)}
+                          disabled={saving}
+                          className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
+                        >
+                          Publish
+                        </button>
+                      </div>
+                    )}
+                    {/* Unpublish Button (only for published) */}
+                    {status === 'published' && (
+                      <div>
+                        <button
+                          onClick={handleUnpublish}
+                          disabled={saving}
+                          className="w-full px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
+                        >
+                          Unpublish
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Canvas Colors */}
@@ -2541,6 +2726,7 @@ export default function AssetEditorPage() {
             borderColor: selectedMechanic.props.borderColor,
             tabSpacing: selectedMechanic.props.tabSpacing,
           }}
+          availableModals={availableModals}
           onSave={(tabs, settings) => {
             // Update all properties at once to avoid state batching issues
             if (!selectedMechanicId) return;
@@ -2614,6 +2800,12 @@ export default function AssetEditorPage() {
           onClose={() => setEditingLogoGrid(null)}
         />
       )}
+
+      <PublishModal
+        isOpen={showPublishModal}
+        onClose={() => setShowPublishModal(false)}
+        onPublish={handlePublish}
+      />
     </div>
   );
 }

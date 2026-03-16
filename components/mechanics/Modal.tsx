@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
+import { MechanicRenderer } from './MechanicRenderer'
 
 interface ModalProps {
   mode?: 'edit' | 'view'
+  modalAsset?: string // ID of linked modal asset
   triggerText?: string
   triggerStyle?: 'button' | 'link' | 'custom'
   triggerColor?: string
@@ -25,8 +27,22 @@ interface ModalProps {
   height?: number
 }
 
+interface LinkedModal {
+  id: string
+  title: string
+  content: string
+  style?: {
+    max_width?: string
+    background_color?: string
+    text_color?: string
+    border_radius?: string
+    padding?: string
+  }
+}
+
 export function Modal({
   mode = 'view',
+  modalAsset,
   triggerText = 'Open Modal',
   triggerStyle = 'button',
   triggerColor = '#3b82f6',
@@ -48,6 +64,25 @@ export function Modal({
 }: ModalProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isAnimating, setIsAnimating] = useState(false)
+  const [linkedModal, setLinkedModal] = useState<LinkedModal | null>(null)
+  const [loadingModal, setLoadingModal] = useState(false)
+
+  // Fetch linked modal if modalAsset is provided
+  useEffect(() => {
+    if (modalAsset && mode === 'view') {
+      setLoadingModal(true)
+      fetch(`/api/modals/${modalAsset}`)
+        .then(res => res.json())
+        .then(data => {
+          setLinkedModal(data)
+          setLoadingModal(false)
+        })
+        .catch(err => {
+          console.error('Failed to load modal asset:', err)
+          setLoadingModal(false)
+        })
+    }
+  }, [modalAsset, mode])
 
   useEffect(() => {
     if (isOpen) {
@@ -194,10 +229,29 @@ export function Modal({
           {triggerText}
         </button>
         <div style={{ marginTop: '8px', fontSize: '12px', color: '#64748b' }}>
-          (Modal preview in edit mode)
+          {modalAsset ? `(Linked to Modal Asset: ${modalAsset})` : '(Modal preview in edit mode)'}
         </div>
       </div>
     )
+  }
+
+  // Determine what content to display
+  const displayTitle = linkedModal ? linkedModal.title : title
+  const displayContent = linkedModal ? linkedModal.content : content
+  const displayBackgroundColor = linkedModal?.style?.background_color || backgroundColor
+  const displayBorderRadius = linkedModal?.style?.border_radius ? parseInt(linkedModal.style.border_radius) : borderRadius
+  const displayPadding = linkedModal?.style?.padding ? parseInt(linkedModal.style.padding) : padding
+  const displayModalWidth = linkedModal?.style?.max_width ? parseInt(linkedModal.style.max_width) : modalWidth
+
+  // Parse mechanics from linked modal if available
+  let mechanics = []
+  try {
+    if (displayContent) {
+      mechanics = JSON.parse(displayContent)
+    }
+  } catch (e) {
+    // If not valid JSON, treat as plain text content
+    mechanics = []
   }
 
   return (
@@ -205,16 +259,30 @@ export function Modal({
       <button 
         style={getTriggerStyle()}
         onClick={() => setIsOpen(true)}
+        disabled={loadingModal}
       >
-        {triggerText}
+        {loadingModal ? 'Loading...' : triggerText}
       </button>
 
       {isOpen && (
         <div style={overlayStyle} onClick={handleOverlayClick}>
-          <div style={getModalStyle()} onClick={(e) => e.stopPropagation()}>
+          <div 
+            style={{
+              ...getModalStyle(),
+              backgroundColor: displayBackgroundColor,
+              borderRadius: `${displayBorderRadius}px`,
+              padding: `${displayPadding}px`,
+              width: `${displayModalWidth}px`,
+            }} 
+            onClick={(e) => e.stopPropagation()}
+          >
             {showCloseButton && (
               <button
-                style={closeButtonStyle}
+                style={{
+                  ...closeButtonStyle,
+                  top: closeButtonPosition === 'inside' ? `${displayPadding}px` : `-${displayPadding + 12}px`,
+                  right: closeButtonPosition === 'inside' ? `${displayPadding}px` : `-${displayPadding + 12}px`,
+                }}
                 onClick={handleClose}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'scale(1.1)'
@@ -229,25 +297,48 @@ export function Modal({
               </button>
             )}
             
-            {title && (
+            {displayTitle && !linkedModal && (
               <h2 style={{
                 margin: 0,
-                marginBottom: `${padding / 2}px`,
+                marginBottom: `${displayPadding / 2}px`,
                 fontSize: '24px',
                 fontWeight: 700,
                 color: '#1f2937'
               }}>
-                {title}
+                {displayTitle}
               </h2>
             )}
             
-            <div style={{
-              fontSize: '16px',
-              lineHeight: 1.6,
-              color: '#4b5563'
-            }}>
-              {content}
-            </div>
+            {/* Render modal content */}
+            {Array.isArray(mechanics) && mechanics.length > 0 ? (
+              <div style={{ position: 'relative', width: '100%', minHeight: '200px' }}>
+                {mechanics.map((mechanic: any) => (
+                  <div
+                    key={mechanic.id}
+                    style={{
+                      position: 'absolute',
+                      left: `${mechanic.x}px`,
+                      top: `${mechanic.y}px`,
+                      width: `${mechanic.width}px`,
+                      height: `${mechanic.height}px`,
+                    }}
+                  >
+                    <MechanicRenderer 
+                      mechanic={mechanic}
+                      mode="view"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{
+                fontSize: '16px',
+                lineHeight: 1.6,
+                color: '#4b5563'
+              }}>
+                {displayContent}
+              </div>
+            )}
           </div>
         </div>
       )}

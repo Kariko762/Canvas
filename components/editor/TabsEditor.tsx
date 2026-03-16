@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { X, Plus, Trash2, Save, Settings, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { X, Plus, Trash2, Save, Settings } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import { MechanicRenderer } from '@/components/mechanics/MechanicRenderer';
 import { MechanicsToolbar } from '@/components/editor/MechanicsToolbar';
 import { getMechanic, createMechanicInstance } from '@/lib/mechanics-registry';
 import { ColorPicker } from '@/components/ui/ColorPicker';
+import { CanvasEditor, type MechanicInstance } from '@/components/editor/CanvasEditor';
+import { PropertyEditor } from '@/components/editor/PropertyEditor';
 
 interface TabControlSettings {
   backgroundColor: string;
@@ -28,26 +29,15 @@ interface Tab {
   mechanics: MechanicInstance[];
 }
 
-interface MechanicInstance {
-  id: string;
-  type: string;
-  name: string;
-  x: number;
-  y: number;
-  width?: number;
-  height?: number;
-  layer: number;
-  props: Record<string, any>;
-}
-
 interface TabsEditorProps {
   tabs: Tab[];
   settings?: Partial<TabControlSettings>;
+  availableModals?: Array<{ id: string; title: string; slug: string }>;
   onSave: (tabs: Tab[], settings: TabControlSettings) => void;
   onClose: () => void;
 }
 
-export function TabsEditor({ tabs: initialTabs, settings: initialSettings, onSave, onClose }: TabsEditorProps) {
+export function TabsEditor({ tabs: initialTabs, settings: initialSettings, availableModals, onSave, onClose }: TabsEditorProps) {
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
   const [viewMode, setViewMode] = useState<'control' | 'tab'>('control');
   const [selectedTabId, setSelectedTabId] = useState<string | null>(
@@ -67,192 +57,11 @@ export function TabsEditor({ tabs: initialTabs, settings: initialSettings, onSav
     borderColor: initialSettings?.borderColor || '#e5e7eb',
     tabSpacing: initialSettings?.tabSpacing || 8,
   });
-  const [zoom, setZoom] = useState(100);
   const [selectedMechanicId, setSelectedMechanicId] = useState<string | null>(null);
-  const [draggingMechanicId, setDraggingMechanicId] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [resizingMechanic, setResizingMechanic] = useState<{ 
-    id: string; 
-    startX: number; 
-    startY: number; 
-    startWidth: number; 
-    startHeight: number;
-    startPosX: number;
-    startPosY: number;
-    direction: 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
-  } | null>(null);
-  const [isPanning, setIsPanning] = useState(false);
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedTab = tabs.find(t => t.id === selectedTabId);
   const mechanics = selectedTab?.mechanics || [];
   const selectedMechanic = mechanics.find(m => m.id === selectedMechanicId);
-
-  useEffect(() => {
-    if (!draggingMechanicId && !resizingMechanic) return;
-
-    const handleWindowMouseMove = (e: MouseEvent) => {
-      if (!canvasRef.current) return;
-      
-      const canvas = canvasRef.current;
-      const rect = canvas.getBoundingClientRect();
-      const scale = zoom / 100;
-
-      // Handle resizing
-      if (resizingMechanic) {
-        const deltaX = (e.clientX - resizingMechanic.startX) / scale;
-        const deltaY = (e.clientY - resizingMechanic.startY) / scale;
-        
-        let newWidth = resizingMechanic.startWidth;
-        let newHeight = resizingMechanic.startHeight;
-        let newX = resizingMechanic.startPosX;
-        let newY = resizingMechanic.startPosY;
-        
-        const dir = resizingMechanic.direction;
-        
-        // Handle width changes
-        if (dir.includes('e')) {
-          newWidth = Math.max(50, resizingMechanic.startWidth + deltaX);
-        } else if (dir.includes('w')) {
-          newWidth = Math.max(50, resizingMechanic.startWidth - deltaX);
-          if (newWidth > 50) {
-            newX = resizingMechanic.startPosX + deltaX;
-          }
-        }
-        
-        // Handle height changes
-        if (dir.includes('s')) {
-          newHeight = Math.max(50, resizingMechanic.startHeight + deltaY);
-        } else if (dir.includes('n')) {
-          newHeight = Math.max(50, resizingMechanic.startHeight - deltaY);
-          if (newHeight > 50) {
-            newY = resizingMechanic.startPosY + deltaY;
-          }
-        }
-
-        setTabs(prev => prev.map(tab =>
-          tab.id === selectedTabId
-            ? {
-                ...tab,
-                mechanics: tab.mechanics.map(m =>
-                  m.id === resizingMechanic.id 
-                    ? { ...m, width: newWidth, height: newHeight, x: newX, y: newY } 
-                    : m
-                )
-              }
-            : tab
-        ));
-        return;
-      }
-
-      // Handle dragging
-      if (draggingMechanicId) {
-        // Account for zoom when calculating position
-        const x = Math.max(0, Math.min((e.clientX - rect.left) / scale - dragOffset.x, tabControlSettings.pageWidth - 50));
-        const y = Math.max(0, Math.min((e.clientY - rect.top) / scale - dragOffset.y, tabControlSettings.pageHeight - 50));
-
-        setTabs(prev => prev.map(tab =>
-          tab.id === selectedTabId
-            ? {
-                ...tab,
-                mechanics: tab.mechanics.map(m =>
-                  m.id === draggingMechanicId ? { ...m, x, y } : m
-                )
-              }
-            : tab
-        ));
-      }
-    };
-
-    const handleWindowMouseUp = () => {
-      setDraggingMechanicId(null);
-      setResizingMechanic(null);
-    };
-
-    window.addEventListener('mousemove', handleWindowMouseMove);
-    window.addEventListener('mouseup', handleWindowMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleWindowMouseMove);
-      window.removeEventListener('mouseup', handleWindowMouseUp);
-    };
-  }, [draggingMechanicId, resizingMechanic, dragOffset, selectedTabId, zoom, tabControlSettings.pageWidth, tabControlSettings.pageHeight]);
-
-  // Panning effect for right-click drag
-  useEffect(() => {
-    if (!isPanning || !containerRef.current) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = e.clientX - panStart.x;
-      const deltaY = e.clientY - panStart.y;
-      setPanOffset({
-        x: panOffset.x + deltaX,
-        y: panOffset.y + deltaY,
-      });
-      setPanStart({ x: e.clientX, y: e.clientY });
-    };
-
-    const handleMouseUp = () => {
-      setIsPanning(false);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isPanning, panStart, panOffset]);
-
-  // Wheel zoom effect
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const delta = e.deltaY > 0 ? -5 : 5; // 5% per scroll
-      setZoom(prev => Math.max(25, Math.min(200, prev + delta)));
-    };
-
-    // Small delay to ensure container is mounted
-    const timeoutId = setTimeout(() => {
-      container.addEventListener('wheel', handleWheel, { passive: false });
-    }, 100);
-
-    return () => {
-      clearTimeout(timeoutId);
-      container.removeEventListener('wheel', handleWheel);
-    };
-  }, []);
-
-  const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 25, 200));
-  };
-
-  const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev - 25, 25));
-  };
-
-  const handleZoomFit = () => {
-    if (!canvasRef.current) return;
-    const container = canvasRef.current.parentElement;
-    if (!container) return;
-    
-    const containerWidth = container.clientWidth - 64;
-    const containerHeight = container.clientHeight - 64;
-    const scaleX = (containerWidth / tabControlSettings.pageWidth) * 100;
-    const scaleY = (containerHeight / tabControlSettings.pageHeight) * 100;
-    
-    setZoom(Math.floor(Math.min(scaleX, scaleY)));
-    // Reset pan when fitting
-    setPanOffset({ x: 0, y: 0 });
-  };
 
   const handleTabControlChange = (key: keyof TabControlSettings, value: any) => {
     setTabControlSettings(prev => ({ ...prev, [key]: value }));
@@ -328,36 +137,13 @@ export function TabsEditor({ tabs: initialTabs, settings: initialSettings, onSav
     ));
   };
 
-  const handleMechanicPositionChange = (mechanicId: string, prop: string, value: any) => {
+  const handleMechanicsChange = (updatedMechanics: MechanicInstance[]) => {
+    if (!selectedTabId) return;
     setTabs(prev => prev.map(tab =>
       tab.id === selectedTabId
-        ? {
-            ...tab,
-            mechanics: tab.mechanics.map(m =>
-              m.id === mechanicId ? { ...m, [prop]: value } : m
-            )
-          }
+        ? { ...tab, mechanics: updatedMechanics }
         : tab
     ));
-  };
-
-  const handleResizeStart = (e: React.MouseEvent, mechanicId: string, direction: 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w') => {
-    e.stopPropagation();
-    e.preventDefault();
-    const mechanic = mechanics.find(m => m.id === mechanicId);
-    if (!mechanic) return;
-
-    setResizingMechanic({
-      id: mechanicId,
-      startX: e.clientX,
-      startY: e.clientY,
-      startWidth: mechanic.width || 200,
-      startHeight: mechanic.height || 100,
-      startPosX: mechanic.x,
-      startPosY: mechanic.y,
-      direction,
-    });
-    setSelectedMechanicId(mechanicId);
   };
 
   return (
@@ -696,282 +482,15 @@ export function TabsEditor({ tabs: initialTabs, settings: initialSettings, onSav
                   handleAddMechanic(type);
                 }}
               />
-
-              <div className="h-12 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-4">
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-zinc-400">Zoom:</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleZoomOut}
-                      className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white"
-                      title="Zoom Out"
-                    >
-                      <ZoomOut className="w-4 h-4" />
-                    </button>
-                    <span className="text-sm font-mono w-12 text-center">{zoom}%</span>
-                    <button
-                      onClick={handleZoomIn}
-                      className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white"
-                      title="Zoom In"
-                    >
-                      <ZoomIn className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={handleZoomFit}
-                      className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white ml-2"
-                      title="Fit to Screen"
-                    >
-                      <Maximize2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                <div className="text-sm text-zinc-500">
-                  {tabControlSettings.pageWidth} × {tabControlSettings.pageHeight}px
-                </div>
-              </div>
-
-              <div 
-                ref={containerRef}
-                className="flex-1 overflow-hidden p-8 relative"
-                onContextMenu={(e) => e.preventDefault()}
-                onMouseDown={(e) => {
-                  // Right-click to pan
-                  if (e.button === 2) {
-                    e.preventDefault();
-                    setIsPanning(true);
-                    setPanStart({ x: e.clientX, y: e.clientY });
-                  }
-                }}
-                onWheel={(e) => {
-                  e.preventDefault();
-                  const delta = e.deltaY > 0 ? -5 : 5;
-                  setZoom(prev => Math.max(25, Math.min(200, prev + delta)));
-                }}
-                style={{ cursor: isPanning ? 'grabbing' : 'default' }}
-              >
-                <div
-                  style={{
-                    transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
-                    transformOrigin: 'top left',
-                  }}
-                >
-                  {/* Outer container matching Tabs component structure */}
-                  <div 
-                    className="relative mx-auto" 
-                    style={{ 
-                      width: `${tabControlSettings.pageWidth}px`,
-                      display: 'flex',
-                      flexDirection: tabControlSettings.tabPosition === 'top' || tabControlSettings.tabPosition === 'bottom' ? 'column' : 'row',
-                      transform: `scale(${zoom / 100})`,
-                      transformOrigin: 'top center',
-                      boxShadow: '0 0 60px rgba(0,0,0,0.5)',
-                    }}
-                  >
-                    {/* Tab Bar - Matches actual Tabs component rendering */}
-                    <div 
-                      style={{ 
-                        display: 'flex',
-                        flexDirection: tabControlSettings.tabPosition === 'top' || tabControlSettings.tabPosition === 'bottom' ? 'row' : 'column',
-                        borderBottom: (tabControlSettings.tabPosition === 'top' || tabControlSettings.tabPosition === 'bottom') && tabControlSettings.tabStyle === 'underline' ? `2px solid ${tabControlSettings.borderColor}` : 'none',
-                        borderRight: (tabControlSettings.tabPosition === 'left' || tabControlSettings.tabPosition === 'right') && tabControlSettings.tabStyle === 'underline' ? `2px solid ${tabControlSettings.borderColor}` : 'none',
-                        padding: `${tabControlSettings.tabSpacing}px`,
-                        backgroundColor: tabControlSettings.tabBarBackgroundColor,
-                        flexShrink: 0,
-                        order: tabControlSettings.tabPosition === 'bottom' || tabControlSettings.tabPosition === 'right' ? 2 : 1
-                      }}
-                    >
-                      {tabs.map((tab) => {
-                        const isActive = selectedTabId === tab.id;
-                        const isHorizontal = tabControlSettings.tabPosition === 'top' || tabControlSettings.tabPosition === 'bottom';
-                        
-                        // Match the actual Tabs component styling logic
-                        let buttonStyle: React.CSSProperties = {
-                          padding: `${tabControlSettings.tabSpacing}px ${tabControlSettings.tabSpacing * 2}px`,
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          color: isActive ? tabControlSettings.activeColor : tabControlSettings.inactiveColor,
-                          fontWeight: isActive ? 600 : 400,
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          outline: 'none',
-                          fontSize: '14px',
-                          whiteSpace: 'nowrap'
-                        };
-
-                        switch (tabControlSettings.tabStyle) {
-                          case 'pills':
-                            buttonStyle = {
-                              ...buttonStyle,
-                              backgroundColor: isActive ? tabControlSettings.activeColor : 'transparent',
-                              color: isActive ? '#ffffff' : tabControlSettings.inactiveColor,
-                              borderRadius: '9999px',
-                              marginRight: isHorizontal ? `${tabControlSettings.tabSpacing}px` : '0',
-                              marginBottom: !isHorizontal ? `${tabControlSettings.tabSpacing}px` : '0'
-                            };
-                            break;
-                          case 'rounded':
-                            buttonStyle = {
-                              ...buttonStyle,
-                              backgroundColor: isActive ? tabControlSettings.activeColor : 'transparent',
-                              color: isActive ? '#ffffff' : tabControlSettings.inactiveColor,
-                              borderRadius: '8px',
-                              marginRight: isHorizontal ? `${tabControlSettings.tabSpacing}px` : '0',
-                              marginBottom: !isHorizontal ? `${tabControlSettings.tabSpacing}px` : '0'
-                            };
-                            break;
-                          case 'minimal':
-                            buttonStyle = {
-                              ...buttonStyle,
-                              color: isActive ? tabControlSettings.activeColor : tabControlSettings.inactiveColor,
-                              fontWeight: isActive ? 700 : 400,
-                              marginRight: isHorizontal ? `${tabControlSettings.tabSpacing * 2}px` : '0',
-                              marginBottom: !isHorizontal ? `${tabControlSettings.tabSpacing}px` : '0'
-                            };
-                            break;
-                          case 'underline':
-                          default:
-                            buttonStyle = {
-                              ...buttonStyle,
-                              color: isActive ? tabControlSettings.activeColor : tabControlSettings.inactiveColor,
-                              borderBottom: isHorizontal ? `3px solid ${isActive ? tabControlSettings.activeColor : 'transparent'}` : 'none',
-                              borderLeft: !isHorizontal ? `3px solid ${isActive ? tabControlSettings.activeColor : 'transparent'}` : 'none',
-                              marginRight: isHorizontal ? `${tabControlSettings.tabSpacing}px` : '0',
-                              marginBottom: !isHorizontal ? `${tabControlSettings.tabSpacing}px` : '0'
-                            };
-                        }
-                        
-                        return (
-                          <button
-                            key={tab.id}
-                            onClick={() => {
-                              setSelectedTabId(tab.id);
-                              setSelectedMechanicId(null);
-                            }}
-                            style={buttonStyle}
-                          >
-                            {tab.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Canvas - content area */}
-                    <div
-                      ref={canvasRef}
-                      className="relative"
-                      style={{
-                        width: `${tabControlSettings.pageWidth}px`,
-                        height: `${tabControlSettings.pageHeight}px`,
-                        backgroundColor: tabControlSettings.backgroundColor,
-                        order: tabControlSettings.tabPosition === 'bottom' || tabControlSettings.tabPosition === 'right' ? 1 : 2,
-                        flex: 1,
-                        minHeight: `${tabControlSettings.pageHeight}px`
-                      }}
-                      onClick={() => setSelectedMechanicId(null)}
-                    >
-                  {mechanics.map((mechanic) => {
-                    const isSelected = mechanic.id === selectedMechanicId;
-                    const isDragging = mechanic.id === draggingMechanicId;
-                    
-                    return (
-                      <div
-                        key={mechanic.id}
-                        className={`absolute ${isDragging ? 'opacity-70' : ''} ${
-                          isSelected ? 'ring-2 ring-blue-500' : ''
-                        }`}
-                        style={{
-                          left: mechanic.x,
-                          top: mechanic.y,
-                          width: mechanic.width || 200,
-                          height: mechanic.height || 100,
-                          cursor: isDragging ? 'grabbing' : 'grab',
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedMechanicId(mechanic.id);
-                        }}
-                        onMouseDown={(e) => {
-                          e.stopPropagation();
-                          setDraggingMechanicId(mechanic.id);
-                          setSelectedMechanicId(mechanic.id);
-                          
-                          if (!canvasRef.current) return;
-                          const canvasRect = canvasRef.current.getBoundingClientRect();
-                          const scale = zoom / 100;
-                          
-                          // Calculate offset in unscaled coordinates
-                          const offsetX = (e.clientX - canvasRect.left) / scale - mechanic.x;
-                          const offsetY = (e.clientY - canvasRect.top) / scale - mechanic.y;
-                          
-                          setDragOffset({
-                            x: offsetX,
-                            y: offsetY,
-                          });
-                        }}
-                      >
-                        <MechanicRenderer
-                          mechanic={mechanic}
-                          mode="edit"
-                        />
-                        {isSelected && (
-                          <>
-                            <div className="absolute -top-6 left-0 text-xs bg-blue-600 text-white px-2 py-1 rounded pointer-events-none">
-                              {mechanic.name || getMechanic(mechanic.type)?.name}
-                            </div>
-                            
-                            {/* Resize Handles */}
-                            {/* Corner Handles */}
-                            <div
-                              onMouseDown={(e) => handleResizeStart(e, mechanic.id, 'nw')}
-                              className="absolute w-2 h-2 bg-white border border-blue-500 cursor-nw-resize hover:bg-blue-100"
-                              style={{ top: '-4px', left: '-4px' }}
-                            />
-                            <div
-                              onMouseDown={(e) => handleResizeStart(e, mechanic.id, 'ne')}
-                              className="absolute w-2 h-2 bg-white border border-blue-500 cursor-ne-resize hover:bg-blue-100"
-                              style={{ top: '-4px', right: '-4px' }}
-                            />
-                            <div
-                              onMouseDown={(e) => handleResizeStart(e, mechanic.id, 'sw')}
-                              className="absolute w-2 h-2 bg-white border border-blue-500 cursor-sw-resize hover:bg-blue-100"
-                              style={{ bottom: '-4px', left: '-4px' }}
-                            />
-                            <div
-                              onMouseDown={(e) => handleResizeStart(e, mechanic.id, 'se')}
-                              className="absolute w-2 h-2 bg-white border border-blue-500 cursor-se-resize hover:bg-blue-100"
-                              style={{ bottom: '-4px', right: '-4px' }}
-                            />
-                            
-                            {/* Edge Handles */}
-                            <div
-                              onMouseDown={(e) => handleResizeStart(e, mechanic.id, 'n')}
-                              className="absolute w-2 h-2 bg-white border border-blue-500 cursor-n-resize hover:bg-blue-100"
-                              style={{ top: '-4px', left: '50%', transform: 'translateX(-50%)' }}
-                            />
-                            <div
-                              onMouseDown={(e) => handleResizeStart(e, mechanic.id, 's')}
-                              className="absolute w-2 h-2 bg-white border border-blue-500 cursor-s-resize hover:bg-blue-100"
-                              style={{ bottom: '-4px', left: '50%', transform: 'translateX(-50%)' }}
-                            />
-                            <div
-                              onMouseDown={(e) => handleResizeStart(e, mechanic.id, 'w')}
-                              className="absolute w-2 h-2 bg-white border border-blue-500 cursor-w-resize hover:bg-blue-100"
-                              style={{ top: '50%', left: '-4px', transform: 'translateY(-50%)' }}
-                            />
-                            <div
-                              onMouseDown={(e) => handleResizeStart(e, mechanic.id, 'e')}
-                              className="absolute w-2 h-2 bg-white border border-blue-500 cursor-e-resize hover:bg-blue-100"
-                              style={{ top: '50%', right: '-4px', transform: 'translateY(-50%)' }}
-                            />
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <CanvasEditor
+                mechanics={mechanics}
+                onMechanicsChange={handleMechanicsChange}
+                selectedMechanicId={selectedMechanicId}
+                onSelectMechanic={setSelectedMechanicId}
+                canvasWidth={tabControlSettings.pageWidth}
+                canvasHeight={tabControlSettings.pageHeight}
+                backgroundColor={tabControlSettings.backgroundColor}
+              />
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center text-zinc-500">
@@ -1000,136 +519,28 @@ export function TabsEditor({ tabs: initialTabs, settings: initialSettings, onSav
               </div>
             </div>
           ) : selectedMechanic ? (
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-lg font-semibold">Properties</h2>
-                  <p className="text-sm text-zinc-500 capitalize">{selectedMechanic.type}</p>
-                </div>
-                <button
-                  onClick={() => handleDeleteMechanic(selectedMechanic.id)}
-                  className="p-2 text-red-500 hover:bg-red-900/20 rounded"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Object Name</label>
-                  <input
-                    type="text"
-                    value={selectedMechanic.name}
-                    onChange={(e) => handleMechanicPositionChange(selectedMechanic.id, 'name', e.target.value)}
-                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">X</label>
-                    <input
-                      type="number"
-                      value={selectedMechanic.x}
-                      onChange={(e) => handleMechanicPositionChange(selectedMechanic.id, 'x', Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Y</label>
-                    <input
-                      type="number"
-                      value={selectedMechanic.y}
-                      onChange={(e) => handleMechanicPositionChange(selectedMechanic.id, 'y', Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded"
-                    />
-                  </div>
-                </div>
-
-                {(() => {
-                  const definition = getMechanic(selectedMechanic.type);
-                  if (!definition) return null;
-                  
-                  const propertyEntries = Object.entries(definition.properties);
-                  if (propertyEntries.length === 0) return null;
-                  
-                  return (
-                    <div className="pt-4 border-t border-zinc-800 space-y-4">
-                      {propertyEntries.map(([propName, propDef]) => (
-                        <div key={propName}>
-                          <label className="block text-sm font-medium mb-2">{propDef.label}</label>
-                          
-                          {propDef.type === 'text' && (
-                            <input
-                              type="text"
-                              value={selectedMechanic.props[propName] || ''}
-                              onChange={(e) => handleMechanicPropChange(propName, e.target.value)}
-                              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded"
-                            />
-                          )}
-                          
-                          {propDef.type === 'textarea' && (
-                            <textarea
-                              value={selectedMechanic.props[propName] || ''}
-                              onChange={(e) => handleMechanicPropChange(propName, e.target.value)}
-                              rows={4}
-                              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded"
-                            />
-                          )}
-                          
-                          {propDef.type === 'number' && (
-                            <input
-                              type="number"
-                              value={selectedMechanic.props[propName] || 0}
-                              onChange={(e) => handleMechanicPropChange(propName, parseFloat(e.target.value))}
-                              min={propDef.min}
-                              max={propDef.max}
-                              step={propDef.step}
-                              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded"
-                            />
-                          )}
-                          
-                          {propDef.type === 'color' && (
-                            <ColorPicker
-                              value={selectedMechanic.props[propName] || '#ffffff'}
-                              onChange={(color) => handleMechanicPropChange(propName, color)}
-                            />
-                          )}
-                          
-                          {propDef.type === 'select' && (
-                            <select
-                              value={selectedMechanic.props[propName] || propDef.defaultValue}
-                              onChange={(e) => handleMechanicPropChange(propName, e.target.value)}
-                              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded"
-                            >
-                              {propDef.options?.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                              ))}
-                            </select>
-                          )}
-                          
-                          {propDef.type === 'toggle' && (
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={selectedMechanic.props[propName] || false}
-                                onChange={(e) => handleMechanicPropChange(propName, e.target.checked)}
-                                className="w-4 h-4"
-                              />
-                              <span className="text-sm text-zinc-400">Enabled</span>
-                            </label>
-                          )}
-                          
-                          {propDef.help && (
-                            <p className="text-xs text-zinc-500 mt-1">{propDef.help}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
+            <PropertyEditor
+              mechanic={selectedMechanic}
+              onPropChange={handleMechanicPropChange}
+              onMechanicChange={(updated) => {
+                if (!selectedTabId) return;
+                setTabs(prev => prev.map(tab =>
+                  tab.id === selectedTabId
+                    ? {
+                        ...tab,
+                        mechanics: tab.mechanics.map(m =>
+                          m.id === updated.id ? updated : m
+                        )
+                      }
+                    : tab
+                ));
+              }}
+              onDelete={() => {
+                if (!selectedMechanicId) return;
+                handleDeleteMechanic(selectedMechanicId);
+              }}
+              additionalData={{ modals: availableModals }}
+            />
           ) : selectedTab ? (
             <div className="p-6">
               <h2 className="text-lg font-semibold mb-4">Tab Properties</h2>

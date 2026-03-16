@@ -2,91 +2,203 @@ export default function Loading() {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#010102',
+      background: 'linear-gradient(to bottom right, #09090b, #1e1b4b, #581c87)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       position: 'relative',
       overflow: 'hidden'
     }}>
-      {/* Logo container */}
+      {/* Grid background */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        opacity: 0.2,
+        backgroundImage: 'linear-gradient(to right, rgba(99, 102, 241, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(99, 102, 241, 0.1) 1px, transparent 1px)',
+        backgroundSize: '40px 40px'
+      }} />
+
+      {/* Main loader */}
       <div style={{
         position: 'relative',
-        maxWidth: '90vw',
-        maxHeight: '70vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '32px'
+        zIndex: 10,
+        textAlign: 'center'
       }}>
-        {/* Grayscale logo */}
-        <img 
-          src="/loading-menu-shadow.png" 
-          alt="Loading"
-          style={{
-            display: 'block',
-            width: 'auto',
-            height: 'auto',
-            maxWidth: '90vw',
-            maxHeight: '70vh',
-            opacity: 0.4
-          }}
-        />
-        
-        {/* Loading text */}
+        {/* Hexagon container */}
         <div style={{
-          textAlign: 'center'
+          width: '200px',
+          height: '200px',
+          margin: '0 auto 32px',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
-          <p style={{
-            color: '#E6E7E8',
-            fontSize: '18px',
-            fontWeight: 500,
+          {/* Outer ring */}
+          <svg style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            animation: 'spin 3s linear infinite'
+          }} viewBox="0 0 200 200">
+            <circle
+              cx="100"
+              cy="100"
+              r="90"
+              fill="none"
+              stroke="url(#grad1)"
+              strokeWidth="2"
+              strokeDasharray="565"
+              strokeDashoffset="141"
+              strokeLinecap="round"
+            />
+            <defs>
+              <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#6366f1" />
+                <stop offset="100%" stopColor="#a855f7" />
+              </linearGradient>
+            </defs>
+          </svg>
+
+          {/* Middle ring */}
+          <svg style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            animation: 'spin 4s linear infinite reverse'
+          }} viewBox="0 0 200 200">
+            <circle
+              cx="100"
+              cy="100"
+              r="65"
+              fill="none"
+              stroke="url(#grad2)"
+              strokeWidth="2"
+              strokeDasharray="408"
+              strokeDashoffset="102"
+              strokeLinecap="round"
+            />
+            <defs>
+              <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#a855f7" />
+                <stop offset="100%" stopColor="#ec4899" />
+              </linearGradient>
+            </defs>
+          </svg>
+
+          {/* Center hexagon */}
+          <div style={{
+            width: '64px',
+            height: '64px',
+            position: 'relative',
+            animation: 'pulse 2s ease-in-out infinite'
+          }}>
+            <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
+              <polygon
+                points="50 1 95 25 95 75 50 99 5 75 5 25"
+                fill="none"
+                stroke="url(#hexGrad)"
+                strokeWidth="3"
+                style={{
+                  filter: 'drop-shadow(0 0 10px rgba(99, 102, 241, 0.5))'
+                }}
+              />
+              <defs>
+                <linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#6366f1" />
+                  <stop offset="100%" stopColor="#ec4899" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+
+          {/* Center dot */}
+          <div style={{
+            position: 'absolute',
+            width: '24px',
+            height: '24px',
+            borderRadius: '50%',
+            background: 'linear-gradient(to bottom right, #60a5fa, #a855f7)',
+            boxShadow: '0 0 20px rgba(99, 102, 241, 0.8)',
+            animation: 'pulse 2s ease-in-out infinite'
+          }} />
+        </div>
+
+        {/* Loading text */}
+        <div>
+          <h2 style={{
+            fontSize: '24px',
+            fontWeight: 600,
+            background: 'linear-gradient(to right, #60a5fa, #a855f7, #ec4899)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
             marginBottom: '8px'
           }}>
-            Building Presentation
-          </p>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '4px'
+            Loading
+          </h2>
+          <p style={{
+            color: '#9ca3af',
+            fontSize: '12px',
+            fontWeight: 500,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase'
           }}>
-            <span style={{ color: '#4bcd3e', animation: 'pulse 1.5s infinite' }}>●</span>
-            <span style={{ color: '#4bcd3e', animation: 'pulse 1.5s infinite 0.2s' }}>●</span>
-            <span style={{ color: '#4bcd3e', animation: 'pulse 1.5s infinite 0.4s' }}>●</span>
-          </div>
+            Initializing Systems
+          </p>
         </div>
       </div>
 
-      {/* Progress bar - indeterminate animation */}
+      {/* Corner accents */}
       <div style={{
-        position: 'fixed',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '128px',
+        height: '128px',
+        borderTop: '2px solid rgba(99, 102, 241, 0.2)',
+        borderLeft: '2px solid rgba(99, 102, 241, 0.2)'
+      }} />
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: '128px',
+        height: '128px',
+        borderTop: '2px solid rgba(168, 85, 247, 0.2)',
+        borderRight: '2px solid rgba(168, 85, 247, 0.2)'
+      }} />
+      <div style={{
+        position: 'absolute',
         bottom: 0,
         left: 0,
+        width: '128px',
+        height: '128px',
+        borderBottom: '2px solid rgba(168, 85, 247, 0.2)',
+        borderLeft: '2px solid rgba(168, 85, 247, 0.2)'
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
         right: 0,
-        height: '2px',
-        backgroundColor: '#0D0D0D',
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          height: '100%',
-          width: '30%',
-          backgroundColor: '#4bcd3e',
-          animation: 'indeterminate 2s infinite ease-in-out'
-        }} />
-      </div>
+        width: '128px',
+        height: '128px',
+        borderBottom: '2px solid rgba(236, 72, 153, 0.2)',
+        borderRight: '2px solid rgba(236, 72, 153, 0.2)'
+      }} />
 
-      <style>{`
+      {/* Inline animations */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
         @keyframes pulse {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 1; }
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.7; transform: scale(0.95); }
         }
-        
-        @keyframes indeterminate {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(400%); }
-        }
-      `}</style>
+      `}} />
     </div>
   );
 }

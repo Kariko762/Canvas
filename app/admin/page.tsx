@@ -1,15 +1,16 @@
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { verifySessionToken } from '@/lib/auth'
-import { getWorkspaces, getAssetsByWorkspaceId } from '@/lib/data'
+import { getWorkspaces, getAssetsByWorkspaceId, getModalsByWorkspaceId } from '@/lib/data'
 import { Plus, LogOut, Grid3x3, Layers, Folder } from 'lucide-react'
 import Link from 'next/link'
 import { AssetCard } from '@/components/ui/AssetCard'
+import { ModalCard } from '@/components/ui/ModalCard'
 
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: { workspace?: string }
+  searchParams: { workspace?: string; view?: string }
 }) {
   const cookieStore = await cookies()
   const session = cookieStore.get('session')
@@ -26,16 +27,42 @@ export default async function AdminPage({
   const workspaces = await getWorkspaces()
   const selectedWorkspaceId = searchParams.workspace || workspaces[0]?.id || ''
   const assets = selectedWorkspaceId ? await getAssetsByWorkspaceId(selectedWorkspaceId) : []
+  const modals = selectedWorkspaceId ? await getModalsByWorkspaceId(selectedWorkspaceId) : []
   const selectedWorkspace = workspaces.find(w => w.id === selectedWorkspaceId)
+  const currentView = searchParams.view || 'presentations' // Default to presentations
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
-        <div className="px-6 py-4 flex items-center justify-between">
+        <div className="px-6 py-4 flex items-center justify-between relative">
           <div className="flex items-center gap-4">
             <Layers className="w-8 h-8 text-indigo-600" />
             <h1 className="text-2xl font-bold text-gray-900">FIS Presents</h1>
+          </div>
+          
+          {/* Center-aligned tabs */}
+          <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+            <Link
+              href={`/admin?workspace=${selectedWorkspaceId}&view=presentations`}
+              className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                currentView === 'presentations'
+                  ? 'bg-white text-indigo-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Presentations
+            </Link>
+            <Link
+              href={`/admin?workspace=${selectedWorkspaceId}&view=modals`}
+              className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                currentView === 'modals'
+                  ? 'bg-white text-indigo-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Modals
+            </Link>
           </div>
           
           <div className="flex items-center gap-4">
@@ -111,53 +138,108 @@ export default async function AdminPage({
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-7xl mx-auto px-6 py-8">
-            {/* Actions Bar */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Grid3x3 className="w-6 h-6 text-gray-600" />
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {selectedWorkspace?.name || 'Assets'}
-                </h2>
-                <span className="text-sm text-gray-500">({assets.length})</span>
-              </div>
-              
-              {selectedWorkspaceId && (
-                <Link
-                  href={`/admin/assets/new?workspace=${selectedWorkspaceId}`}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  New Asset
-                </Link>
-              )}
-            </div>
+            {currentView === 'presentations' ? (
+              <>
+                {/* Actions Bar */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <Grid3x3 className="w-6 h-6 text-gray-600" />
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      {selectedWorkspace?.name || 'Assets'}
+                    </h2>
+                    <span className="text-sm text-gray-500">({assets.length})</span>
+                  </div>
+                  
+                  {selectedWorkspaceId && (
+                    <Link
+                      href={`/admin/assets/new?workspace=${selectedWorkspaceId}`}
+                      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      New Asset
+                    </Link>
+                  )}
+                </div>
 
-            {/* Asset Grid */}
-            {!selectedWorkspaceId ? (
-              <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-                <Folder className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Select a workspace</h3>
-                <p className="text-gray-500">Choose a workspace from the sidebar to view assets</p>
-              </div>
-            ) : assets.length === 0 ? (
-              <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-                <Layers className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No assets yet</h3>
-                <p className="text-gray-500 mb-6">Get started by creating your first asset</p>
-                <Link
-                  href={`/admin/assets/new?workspace=${selectedWorkspaceId}`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Asset
-                </Link>
-              </div>
+                {/* Asset Grid */}
+                {!selectedWorkspaceId ? (
+                  <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+                    <Folder className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Select a workspace</h3>
+                    <p className="text-gray-500">Choose a workspace from the sidebar to view assets</p>
+                  </div>
+                ) : assets.length === 0 ? (
+                  <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+                    <Layers className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No assets yet</h3>
+                    <p className="text-gray-500 mb-6">Get started by creating your first asset</p>
+                    <Link
+                      href={`/admin/assets/new?workspace=${selectedWorkspaceId}`}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Create Asset
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {assets.map((asset) => (
+                      <AssetCard key={asset.id} asset={asset} />
+                    ))}
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {assets.map((asset) => (
-                  <AssetCard key={asset.id} asset={asset} />
-                ))}
-              </div>
+              <>
+                {/* Modals View */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <Grid3x3 className="w-6 h-6 text-gray-600" />
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      Modals
+                    </h2>
+                    <span className="text-sm text-gray-500">({modals.length})</span>
+                  </div>
+                  
+                  {selectedWorkspaceId && (
+                    <Link
+                      href={`/admin/modals/new?workspace=${selectedWorkspaceId}`}
+                      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      New Modal
+                    </Link>
+                  )}
+                </div>
+
+                {/* Modals Grid */}
+                {!selectedWorkspaceId ? (
+                  <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+                    <Folder className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Select a workspace</h3>
+                    <p className="text-gray-500">Choose a workspace from the sidebar to view modals</p>
+                  </div>
+                ) : modals.length === 0 ? (
+                  <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+                    <Layers className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No modals yet</h3>
+                    <p className="text-gray-500 mb-6">Get started by creating your first modal</p>
+                    <Link
+                      href={`/admin/modals/new?workspace=${selectedWorkspaceId}`}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Create Modal
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {modals.map((modal) => (
+                      <ModalCard key={modal.id} modal={modal} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </main>

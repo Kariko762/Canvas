@@ -2,12 +2,16 @@
 
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { PresentationLoader } from './PresentationLoader';
+import { TechLoader } from './TechLoader';
+
+type LoaderStyle = 'presentation' | 'tech';
 
 interface GlobalLoadingContextType {
-  showLoading: () => void;
+  showLoading: (style?: LoaderStyle) => void;
   hideLoading: () => void;
   setProgress: (progress: number) => void;
   progress: number;
+  loaderStyle: LoaderStyle;
 }
 
 const GlobalLoadingContext = createContext<GlobalLoadingContextType | undefined>(undefined);
@@ -15,8 +19,10 @@ const GlobalLoadingContext = createContext<GlobalLoadingContextType | undefined>
 export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgressState] = useState(0);
+  const [loaderStyle, setLoaderStyle] = useState<LoaderStyle>('presentation'); // Default to presentation loader
 
-  const showLoading = () => {
+  const showLoading = (style: LoaderStyle = 'presentation') => {
+    setLoaderStyle(style);
     setIsLoading(true);
     setProgressState(0);
   };
@@ -35,11 +41,15 @@ export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <GlobalLoadingContext.Provider value={{ showLoading, hideLoading, setProgress, progress }}>
+    <GlobalLoadingContext.Provider value={{ showLoading, hideLoading, setProgress, progress, loaderStyle }}>
       {children}
       {isLoading && (
         <div className="fixed inset-0 z-[9999]">
-          <PresentationLoader progress={progress} />
+          {loaderStyle === 'presentation' ? (
+            <PresentationLoader progress={progress} />
+          ) : (
+            <TechLoader progress={progress} />
+          )}
         </div>
       )}
     </GlobalLoadingContext.Provider>

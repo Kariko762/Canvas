@@ -5,6 +5,7 @@ const DATA_DIR = path.join(process.cwd(), 'data')
 const USERS_PATH = path.join(DATA_DIR, 'users.json')
 const WORKSPACES_PATH = path.join(DATA_DIR, 'workspaces.json')
 const ASSETS_DIR = path.join(DATA_DIR, 'assets')
+const MODALS_DIR = path.join(DATA_DIR, 'modals')
 
 export interface User {
   id: string
@@ -43,13 +44,36 @@ export interface Asset {
   updated_at: number
 }
 
+export interface Modal {
+  id: string
+  workspace_id: string
+  title: string
+  slug: string
+  description?: string
+  content: string // Rich text content or HTML
+  status: 'draft' | 'published'
+  trigger_type?: 'manual' | 'auto' | 'timed' | 'interaction'
+  trigger_config?: string // JSON config for trigger settings
+  style?: {
+    width?: string
+    max_width?: string
+    background_color?: string
+    text_color?: string
+    border_radius?: string
+    padding?: string
+  }
+  created_by: string
+  created_at: number
+  updated_at: number
+}
+
 export interface Page {
   id: string
   asset_id: string
   title: string
   slug: string
   order: number
-  status: 'draft' | 'published'
+  status: 'draft' | 'qa' | 'complete'
   transition_type?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down'
   transition_duration?: number // in milliseconds
   canvas_background_color?: string
@@ -93,6 +117,7 @@ async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
 async function ensureDataDir(): Promise<void> {
   await fs.mkdir(DATA_DIR, { recursive: true })
   await fs.mkdir(ASSETS_DIR, { recursive: true })
+  await fs.mkdir(MODALS_DIR, { recursive: true })
 }
 
 // Legacy compatibility - reads all data into single object
@@ -400,4 +425,79 @@ export async function deleteAssetPage(assetId: string, pageId: string): Promise<
   pages.splice(index, 1)
   await updateAssetPages(assetId, pages)
   return true
+}
+
+// ============================================
+// Modal functions - uses dedicated file system
+// ============================================
+
+export async function getModalsByWorkspaceId(workspaceId: string): Promise<Modal[]> {
+  await ensureDataDir()
+  
+  try {
+    const modalDirs = await fs.readdir(MODALS_DIR).catch(() => [])
+    const modals: Modal[] = []
+    
+    for (const modalId of modalDirs) {
+      const metaPath = path.join(MODALS_DIR, modalId, 'meta.json')
+      const modal = await readJsonFile<Modal>(metaPath, null as any)
+      if (modal && modal.workspace_id === workspaceId) {
+        modals.push(modal)
+      }
+    }
+    
+    return modals.sort((a, b) => b.created_at - a.created_at)
+  } catch (error) {
+    return []
+  }
+}
+
+export async function getModalById(id: string): Promise<Modal | null> {
+  const metaPath = path.join(MODALS_DIR, id, 'meta.json')
+  return await readJsonFile<Modal>(metaPath, null as any)
+}
+
+export async function getModalBySlug(slug: string, workspaceId: string): Promise<Modal | null> {
+  const modals = await getModalsByWorkspaceId(workspaceId)
+  return modals.find(m => m.slug === slug) || null
+}
+
+export async function createModal(modal: Omit<Modal, 'created_at' | 'updated_at'>): Promise<Modal> {
+  await ensureDataDir()
+  const now = Math.floor(Date.now() / 1000)
+  const newModal: Modal = {
+    ...modal,
+    created_at: now,
+    updated_at: now
+  }
+  
+  const modalDir = path.join(MODALS_DIR, newModal.id)
+  await fs.mkdir(modalDir, { recursive: true })
+  await writeJsonFile(path.join(modalDir, 'meta.json'), newModal)
+  
+  return newModal
+}
+
+export async function updateModal(id: string, updates: Partial<Modal>): Promise<Modal | null> {
+  const metaPath = path.join(MODALS_DIR, id, 'meta.json')
+  const modal = await readJsonFile<Modal>(metaPath, null as any)
+  if (!modal) return null
+  
+  const updated = {
+    ...modal,
+    ...updates,
+    updated_at: Math.floor(Date.now() / 1000)
+  }
+  await writeJsonFile(metaPath, updated)
+  return updated
+}
+
+export async function deleteModal(id: string): Promise<boolean> {
+  const modalDir = path.join(MODALS_DIR, id)
+  try {
+    await fs.rm(modalDir, { recursive: true, force: true })
+    return true
+  } catch (error) {
+    return false
+  }
 }

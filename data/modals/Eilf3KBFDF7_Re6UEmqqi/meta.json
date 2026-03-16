@@ -1,0 +1,22 @@
+{
+  "id": "Eilf3KBFDF7_Re6UEmqqi",
+  "workspace_id": "ws-default",
+  "title": "New",
+  "slug": "new",
+  "description": "New",
+  "content": "[{\"id\":\"Y8Pg70acUAmaH65N4UqL_\",\"type\":\"title\",\"name\":\"Title Y8Pg\",\"x\":12.647058823529505,\"y\":62.823529411764724,\"layer\":1,\"props\":{\"text\":\"Your Title Here\",\"size\":\"xl\",\"weight\":\"bold\",\"align\":\"center\",\"color\":\"#ffffff\"},\"width\":378.7058823529412,\"height\":56}]",
+  "status": "draft",
+  "created_by": "user-1",
+  "created_at": 1773605178,
+  "updated_at": 1773669774,
+  "style": {
+    "max_width": "600px",
+    "background_color": "#431C5B",
+    "border_radius": "20px",
+    "padding": "24px",
+    "title_bar_type": "solid",
+    "title_bar_color": "#B21A53",
+    "title_bar_gradient_from": "#431C5B",
+    "title_bar_gradient_to": "#1d1f48"
+  }
+}

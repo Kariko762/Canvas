@@ -14,6 +14,7 @@ export type PropertyType =
   | 'toggle' 
   | 'range'
   | 'image'
+  | 'modalAsset'
 
 export interface PropertyDefinition {
   type: PropertyType
@@ -382,6 +383,12 @@ export const MECHANICS_REGISTRY: Record<string, MechanicDefinition> = {
         defaultValue: '',
         placeholder: 'Page slug, URL, or Modal ID',
         help: 'For "Go to Page" enter page slug, for "External Link" enter URL, for "Open Modal" select from dropdown'
+      },
+      modalAsset: {
+        type: 'modalAsset',
+        label: 'Select Modal',
+        defaultValue: '',
+        help: 'Choose a modal from your modal assets'
       },
       backgroundColor: {
         type: 'color',
@@ -1091,6 +1098,12 @@ export const MECHANICS_REGISTRY: Record<string, MechanicDefinition> = {
     category: 'interactive',
     icon: 'Square',
     properties: {
+      modalAsset: {
+        type: 'modalAsset',
+        label: 'Modal Asset',
+        defaultValue: '',
+        help: 'Select a modal from your modal assets, or leave empty to use custom content below'
+      },
       triggerText: {
         type: 'text',
         label: 'Trigger Button Text',

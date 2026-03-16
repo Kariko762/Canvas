@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useGlobalLoading } from './GlobalLoadingContext';
+import { ExternalLink } from 'lucide-react';
 
 interface Asset {
   id: string;
@@ -22,8 +23,13 @@ export function AssetCard({ asset }: AssetCardProps) {
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    showLoading();
+    showLoading(); // Uses TechLoader (default)
     router.push(`/admin/assets/${asset.id}`);
+  };
+
+  const handleOpenPreview = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(`/e/${asset.id}`, '_blank');
   };
 
   return (
@@ -33,10 +39,19 @@ export function AssetCard({ asset }: AssetCardProps) {
     >
       {/* Thumbnail */}
       <div 
-        className="aspect-video flex items-center justify-center text-white text-4xl font-bold"
+        className="aspect-video flex items-center justify-center text-white text-4xl font-bold relative"
         style={{ backgroundColor: asset.canvas_background_color || '#6366f1' }}
       >
         {asset.title.charAt(0).toUpperCase()}
+        
+        {/* Preview Button */}
+        <button
+          onClick={handleOpenPreview}
+          className="absolute top-2 right-2 p-2 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+          title="Open Preview"
+        >
+          <ExternalLink className="w-4 h-4 text-white" />
+        </button>
       </div>
       
       {/* Info */}

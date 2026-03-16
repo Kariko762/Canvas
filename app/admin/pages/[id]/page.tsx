@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Save, Trash2, GripVertical } from 'lucide-react'
+import { ArrowLeft, Plus, Save, Trash2, GripVertical, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { nanoid } from 'nanoid'
 import { MechanicRenderer } from '@/components/mechanics/MechanicRenderer'
@@ -14,7 +14,7 @@ import {
   type MechanicCategory 
 } from '@/lib/mechanics-registry'
 import { useConfirm } from '@/components/ui/useConfirm'
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { CircularLoader } from '@/components/ui/CircularLoader'
 
 interface Page {
   id: string
@@ -22,6 +22,7 @@ interface Page {
   title: string
   slug: string
   order: number
+  status: 'draft' | 'qa' | 'complete'
   mechanics: string | null
   created_at: string
   updated_at: string
@@ -33,6 +34,14 @@ interface MechanicInstance {
   props: Record<string, any>
 }
 
+interface Modal {
+  id: string
+  title: string
+  slug: string
+  workspace_id: string
+  status: string
+}
+
 export default function PageEditorPage() {
   const params = useParams()
   const router = useRouter()
@@ -41,19 +50,49 @@ export default function PageEditorPage() {
   const [page, setPage] = useState<Page | null>(null)
   const [mechanics, setMechanics] = useState<MechanicInstance[]>([])
   const [selectedMechanicId, setSelectedMechanicId] = useState<string | null>(null)
+  const [mounting, setMounting] = useState(true) // Immediate loading state
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [showMechanicPicker, setShowMechanicPicker] = useState(false)
+  const [modals, setModals] = useState<Modal[]>([])
   
   const { confirm, ConfirmDialog } = useConfirm()
   
   const selectedMechanic = mechanics.find(m => m.id === selectedMechanicId)
   const availableMechanics = getAllMechanics()
 
+  // Clear mounting state after component mounts (immediate loading screen)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMounting(false);
+    }, 100); // Small delay to ensure loading screen shows
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     loadPage()
   }, [pageId])
+
+  useEffect(() => {
+    if (page) {
+      loadModals()
+    }
+  }, [page])
+
+  const loadModals = async () => {
+    try {
+      // Get workspace_id from page or use default
+      const workspaceId = page?.asset_id || 'default'
+      const res = await fetch(`/api/modals?workspace_id=${workspaceId}&status=published`)
+      if (res.ok) {
+        const data = await res.json()
+        setModals(data || [])
+      }
+    } catch (err) {
+      console.error('Failed to load modals:', err)
+    }
+  }
 
   const loadPage = async () => {
     try {
@@ -150,20 +189,28 @@ export default function PageEditorPage() {
     setMechanics(newMechanics)
   }
 
-  if (loading) {
-    return <LoadingSpinner />
+  // Show immediate loading screen (before compilation completes)
+  if (mounting || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#09090b' }}>
+        <CircularLoader 
+          size={120}
+          message={mounting ? "Initializing Page Editor..." : "Loading page data..."}
+        />
+      </div>
+    )
   }
 
   if (!page) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#09090b' }}>
         <p className="text-zinc-400">Page not found</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
+    <div className="min-h-screen text-white flex flex-col" style={{ backgroundColor: '#09090b' }}>
       {/* Header */}
       <div className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between bg-zinc-900">
         <div className="flex items-center gap-4">
@@ -180,6 +227,14 @@ export default function PageEditorPage() {
         </div>
         
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.open(`/e/${page.asset_id}?from=editor`, '_blank')}
+            className="px-4 py-2 bg-zinc-800 text-white rounded hover:bg-zinc-700 transition-colors flex items-center gap-2"
+            title="Preview Live Version"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Preview
+          </button>
           <button
             onClick={() => setShowMechanicPicker(!showMechanicPicker)}
             className="px-4 py-2 bg-zinc-800 text-white rounded hover:bg-zinc-700 transition-colors flex items-center gap-2"
@@ -239,7 +294,17 @@ export default function PageEditorPage() {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Canvas */}
-        <div className="flex-1 overflow-y-auto p-8 bg-zinc-950">
+        <div 
+          className="flex-1 overflow-y-auto p-8"
+          style={{
+            backgroundColor: '#09090b',
+            backgroundImage: `
+              linear-gradient(rgba(75, 205, 62, 0.05) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(75, 205, 62, 0.05) 1px, transparent 1px)
+            `,
+            backgroundSize: '20px 20px'
+          }}
+        >
           <div className="max-w-4xl mx-auto">
             {mechanics.length === 0 ? (
               <div className="text-center py-20">
@@ -312,7 +377,20 @@ export default function PageEditorPage() {
                   const definition = getMechanic(selectedMechanic.type)
                   if (!definition) return null
                   
-                  return Object.entries(definition.properties).map(([propName, propDef]) => (
+                  // Check if this is a button and get the current action
+                  const isButton = selectedMechanic.type === 'button'
+                  const currentAction = selectedMechanic.props.action || 'next'
+                  
+                  return Object.entries(definition.properties).map(([propName, propDef]) => {
+                    // For button mechanic, conditionally show actionValue or modalAsset based on action
+                    if (isButton && propName === 'actionValue' && currentAction === 'modal') {
+                      return null // Hide actionValue when action is modal
+                    }
+                    if (isButton && propName === 'modalAsset' && currentAction !== 'modal') {
+                      return null // Hide modalAsset when action is not modal
+                    }
+                    
+                    return (
                     <div key={propName}>
                       <label className="block text-sm font-medium mb-2">
                         {propDef.label}
@@ -410,11 +488,27 @@ export default function PageEditorPage() {
                         </div>
                       )}
                       
+                      {propDef.type === 'modalAsset' && (
+                        <select
+                          value={selectedMechanic.props[propName] || ''}
+                          onChange={(e) => handleMechanicPropChange(propName, e.target.value)}
+                          className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white"
+                        >
+                          <option value="">-- Select Modal --</option>
+                          {modals.map(modal => (
+                            <option key={modal.id} value={modal.id}>
+                              {modal.title} ({modal.slug})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      
                       {propDef.help && (
                         <p className="text-xs text-zinc-500 mt-1">{propDef.help}</p>
                       )}
                     </div>
-                  ))
+                  )
+                  })
                 })()}
               </div>
             </div>
@@ -427,6 +521,16 @@ export default function PageEditorPage() {
       </div>
 
       <ConfirmDialog />
+
+      {/* Saving Overlay */}
+      {saving && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(9, 9, 11, 0.9)' }}>
+          <CircularLoader 
+            size={120}
+            message="Saving page..."
+          />
+        </div>
+      )}
     </div>
   )
 }
