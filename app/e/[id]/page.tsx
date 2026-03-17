@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, ArrowRight, ArrowLeftCircle, Maximize, Minimize } from 'lucide-react'
 import { MechanicRenderer } from '@/components/mechanics/MechanicRenderer'
+import { Menu, type MenuProps } from '@/components/mechanics/Menu'
 
 const CANVAS_WIDTH = 1920
 const CANVAS_HEIGHT = 1080
@@ -69,6 +70,7 @@ export default function AssetViewerPage() {
   const [error, setError] = useState('')
   const [canvasScale, setCanvasScale] = useState(1)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [menuConfig, setMenuConfig] = useState<Omit<MenuProps, 'pages' | 'currentPage'> | null>(null)
 
   // Calculate canvas scale to fit viewport - prioritize height
   useEffect(() => {
@@ -91,14 +93,18 @@ export default function AssetViewerPage() {
     try {
       setLoading(true)
       
-      // Load asset
-      const assetRes = await fetch(`/api/assets/${assetId}`)
+      // Load asset, pages, and menu config
+      const [assetRes, pagesRes, menuRes] = await Promise.all([
+        fetch(`/api/assets/${assetId}`),
+        fetch(`/api/assets/${assetId}/pages`),
+        fetch(`/api/assets/${assetId}/menu`)
+      ])
+      
       if (!assetRes.ok) throw new Error('Failed to load asset')
       const assetData = await assetRes.json()
       setAsset(assetData)
 
       // Load pages
-      const pagesRes = await fetch(`/api/assets/${assetId}/pages`)
       if (!pagesRes.ok) throw new Error('Failed to load pages')
       const pagesData = await pagesRes.json()
       const pagesList = pagesData.pages || []
@@ -114,6 +120,12 @@ export default function AssetViewerPage() {
       }
       
       setPages(filteredPages)
+
+      // Load menu config
+      if (menuRes.ok) {
+        const menuData = await menuRes.json()
+        setMenuConfig(menuData.menuConfig)
+      }
       
       setLoading(false)
     } catch (err: any) {
@@ -263,6 +275,16 @@ export default function AssetViewerPage() {
     <div 
       className="fixed inset-0 flex items-center justify-center bg-black overflow-hidden"
     >
+      {/* Menu Component - Rendered on top of everything */}
+      {menuConfig && (
+        <Menu
+          {...menuConfig}
+          pages={pages.map(p => ({ id: p.id, title: p.title, slug: p.slug }))}
+          currentPage={currentPage.slug}
+          mode="view"
+        />
+      )}
+
       {/* Back Button - subtle until hover */}
       <button
         onClick={handleBack}

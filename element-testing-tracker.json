@@ -1,0 +1,677 @@
+{
+  "testingMetadata": {
+    "projectName": "FIS-Presents Mechanics Library",
+    "totalElements": 37,
+    "lastUpdated": "2026-03-17",
+    "testingStartDate": null,
+    "testingCompleteDate": null
+  },
+  "categories": {
+    "content": {
+      "name": "Content Mechanics",
+      "count": 6,
+      "elements": [
+        {
+          "id": "title",
+          "name": "Title",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "text",
+          "name": "Text",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "list",
+          "name": "List",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "quote",
+          "name": "Quote",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "codeblock",
+          "name": "CodeBlock",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "headline",
+          "name": "Headline",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        }
+      ]
+    },
+    "layout": {
+      "name": "Layout Mechanics",
+      "count": 9,
+      "elements": [
+        {
+          "id": "container",
+          "name": "Container",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "columns",
+          "name": "Columns",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "spacer",
+          "name": "Spacer",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "scrollcontainer",
+          "name": "ScrollContainer",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "accordion",
+          "name": "Accordion",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": true,
+          "externalEditorTest": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "tabs",
+          "name": "Tabs",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": true,
+          "externalEditorTest": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "gridlayout",
+          "name": "GridLayout",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": true,
+          "externalEditorTest": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "modal",
+          "name": "Modal",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "splitscreen",
+          "name": "SplitScreen",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        }
+      ]
+    },
+    "media": {
+      "name": "Media Mechanics",
+      "count": 8,
+      "elements": [
+        {
+          "id": "image",
+          "name": "Image",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "videoplayer",
+          "name": "VideoPlayer",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "imagegallery",
+          "name": "ImageGallery",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "imagecomparison",
+          "name": "ImageComparison",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "iconlibrary",
+          "name": "IconLibrary",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "logogrid",
+          "name": "LogoGrid",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": true,
+          "externalEditorTest": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "avatarcard",
+          "name": "AvatarCard",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": true,
+          "externalEditorTest": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "carousel",
+          "name": "Carousel",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": true,
+          "externalEditorTest": false,
+          "issues": [],
+          "notes": ""
+        }
+      ]
+    },
+    "decoration": {
+      "name": "Decoration Mechanics",
+      "count": 2,
+      "elements": [
+        {
+          "id": "shape",
+          "name": "Shape",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "divider",
+          "name": "Divider",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        }
+      ]
+    },
+    "interactive": {
+      "name": "Interactive Mechanics",
+      "count": 6,
+      "elements": [
+        {
+          "id": "button",
+          "name": "Button",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "flipcard",
+          "name": "FlipCard",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "badge",
+          "name": "Badge",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "tooltip",
+          "name": "Tooltip",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "ctacard",
+          "name": "CTACard",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "alert",
+          "name": "Alert",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        }
+      ]
+    },
+    "data": {
+      "name": "Data Mechanics",
+      "count": 6,
+      "elements": [
+        {
+          "id": "table",
+          "name": "Table",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": true,
+          "externalEditorTest": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "statscounter",
+          "name": "StatsCounter",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "progressbar",
+          "name": "ProgressBar",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "testimonial",
+          "name": "Testimonial",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": true,
+          "externalEditorTest": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "featuregrid",
+          "name": "FeatureGrid",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": true,
+          "externalEditorTest": false,
+          "issues": [],
+          "notes": ""
+        },
+        {
+          "id": "pricingcard",
+          "name": "PricingCard",
+          "status": "not-tested",
+          "renderTest": false,
+          "propsTest": false,
+          "editMode": false,
+          "viewMode": false,
+          "hasExternalEditor": true,
+          "externalEditorTest": false,
+          "issues": [],
+          "notes": ""
+        }
+      ]
+    }
+  },
+  "externalEditors": [
+    {
+      "id": "accordion-editor",
+      "name": "AccordionEditor",
+      "linkedElement": "accordion",
+      "status": "not-tested",
+      "openClose": false,
+      "saveCancel": false,
+      "uiLayout": false,
+      "dataHandling": false,
+      "issues": [],
+      "notes": ""
+    },
+    {
+      "id": "tabs-editor",
+      "name": "TabsEditor",
+      "linkedElement": "tabs",
+      "status": "not-tested",
+      "openClose": false,
+      "saveCancel": false,
+      "uiLayout": false,
+      "dataHandling": false,
+      "issues": [],
+      "notes": ""
+    },
+    {
+      "id": "grid-editor",
+      "name": "GridEditor",
+      "linkedElement": "gridlayout",
+      "status": "not-tested",
+      "openClose": false,
+      "saveCancel": false,
+      "uiLayout": false,
+      "dataHandling": false,
+      "issues": [],
+      "notes": ""
+    },
+    {
+      "id": "logogrid-editor",
+      "name": "LogoGridEditor",
+      "linkedElement": "logogrid",
+      "status": "not-tested",
+      "openClose": false,
+      "saveCancel": false,
+      "uiLayout": false,
+      "dataHandling": false,
+      "issues": [],
+      "notes": ""
+    },
+    {
+      "id": "avatarcard-editor",
+      "name": "AvatarCardEditor",
+      "linkedElement": "avatarcard",
+      "status": "not-tested",
+      "openClose": false,
+      "saveCancel": false,
+      "uiLayout": false,
+      "dataHandling": false,
+      "issues": [],
+      "notes": ""
+    },
+    {
+      "id": "table-editor",
+      "name": "TableEditor",
+      "linkedElement": "table",
+      "status": "not-tested",
+      "openClose": false,
+      "saveCancel": false,
+      "uiLayout": false,
+      "dataHandling": false,
+      "issues": [],
+      "notes": ""
+    },
+    {
+      "id": "testimonial-editor",
+      "name": "TestimonialEditor",
+      "linkedElement": "testimonial",
+      "status": "not-tested",
+      "openClose": false,
+      "saveCancel": false,
+      "uiLayout": false,
+      "dataHandling": false,
+      "issues": [],
+      "notes": ""
+    },
+    {
+      "id": "featuregrid-editor",
+      "name": "FeatureGridEditor",
+      "linkedElement": "featuregrid",
+      "status": "not-tested",
+      "openClose": false,
+      "saveCancel": false,
+      "uiLayout": false,
+      "dataHandling": false,
+      "issues": [],
+      "notes": ""
+    },
+    {
+      "id": "pricingcard-editor",
+      "name": "PricingCardEditor",
+      "linkedElement": "pricingcard",
+      "status": "not-tested",
+      "openClose": false,
+      "saveCancel": false,
+      "uiLayout": false,
+      "dataHandling": false,
+      "issues": [],
+      "notes": ""
+    },
+    {
+      "id": "carousel-editor",
+      "name": "CarouselEditor",
+      "linkedElement": "carousel",
+      "status": "not-tested",
+      "openClose": false,
+      "saveCancel": false,
+      "uiLayout": false,
+      "dataHandling": false,
+      "issues": [],
+      "notes": ""
+    }
+  ],
+  "integrationTests": {
+    "mechanicRenderer": {
+      "status": "not-tested",
+      "allCasesPresent": false,
+      "issues": [],
+      "notes": ""
+    },
+    "assetEditorIntegration": {
+      "status": "not-tested",
+      "externalEditorTriggers": false,
+      "issues": [],
+      "notes": ""
+    },
+    "propertiesPanel": {
+      "status": "not-tested",
+      "allPropertyTypesRender": false,
+      "issues": [],
+      "notes": ""
+    },
+    "canvasPositioning": {
+      "status": "not-tested",
+      "dragWorks": false,
+      "resizeWorks": false,
+      "layerOrderWorks": false,
+      "issues": [],
+      "notes": ""
+    },
+    "jsonParsing": {
+      "status": "not-tested",
+      "complexDataStructures": false,
+      "issues": [],
+      "notes": ""
+    },
+    "stateManagement": {
+      "status": "not-tested",
+      "saveMechanics": false,
+      "loadMechanics": false,
+      "issues": [],
+      "notes": ""
+    }
+  },
+  "bugs": {
+    "critical": [],
+    "medium": [],
+    "low": []
+  },
+  "summary": {
+    "lastTestRun": null,
+    "totalTests": 0,
+    "passed": 0,
+    "failed": 0,
+    "blocked": 0,
+    "passRate": "0%"
+  }
+}

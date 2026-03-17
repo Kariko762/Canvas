@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Settings, Save, GripVertical, Layers, ChevronDown, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Settings, Save, GripVertical, Layers, ChevronDown, ZoomIn, ZoomOut, Maximize2, Menu as MenuIcon } from 'lucide-react';
 import Link from 'next/link';
 import { nanoid } from 'nanoid';
 import { useConfirm } from '@/components/ui/useConfirm';
@@ -17,7 +17,14 @@ import { TabsEditor } from '@/components/editor/TabsEditor';
 import { GridEditor } from '@/components/editor/GridEditor';
 import { LogoGridEditor } from '@/components/editor/LogoGridEditor';
 import { AvatarCardEditor } from '@/components/editor/AvatarCardEditor';
+import { TableEditor } from '@/components/editor/TableEditor';
+import { TestimonialEditor } from '@/components/editor/TestimonialEditor';
+import { FeatureGridEditor } from '@/components/editor/FeatureGridEditor';
+import PricingCardEditor from '@/components/editor/PricingCardEditor';
+import CarouselEditor from '@/components/editor/CarouselEditor';
 import { useGlobalLoading } from '@/components/ui/GlobalLoadingContext';
+import { Menu } from '@/components/mechanics/Menu';
+import { MenuEditorPanel, type MenuConfig } from '@/components/editor/MenuEditorPanel';
 import { 
   getAllMechanics, 
   getMechanicsByCategory,
@@ -75,7 +82,7 @@ interface MechanicInstance {
   props: Record<string, any>;
 }
 
-type ViewMode = 'asset' | 'page-editor' | 'page-properties';
+type ViewMode = 'asset' | 'page-editor' | 'page-properties' | 'menu-editor';
 
 export default function AssetEditorPage() {
   const params = useParams();
@@ -159,7 +166,29 @@ export default function AssetEditorPage() {
   const [editingGrid, setEditingGrid] = useState<string | null>(null);
   const [editingLogoGrid, setEditingLogoGrid] = useState<string | null>(null);
   const [editingAvatarCard, setEditingAvatarCard] = useState<string | null>(null);
+  const [editingTable, setEditingTable] = useState<string | null>(null);
+  const [editingTestimonial, setEditingTestimonial] = useState<string | null>(null);
+  const [editingFeatureGrid, setEditingFeatureGrid] = useState<string | null>(null);
+  const [editingPricingCard, setEditingPricingCard] = useState<string | null>(null);
+  const [editingCarousel, setEditingCarousel] = useState<string | null>(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
+
+  // Menu state
+  const [menuConfig, setMenuConfig] = useState<MenuConfig>({
+    enabled: true,
+    menuType: 'burger',
+    position: 'top',
+    animation: 'slide-down',
+    backgroundColor: '#1a1a1a',
+    textColor: '#ffffff',
+    accentColor: '#3b82f6',
+    rightPanelItems: []
+  });
+  const [menuChanged, setMenuChanged] = useState(false);
+  const [originalMenuConfig, setOriginalMenuConfig] = useState<string>('{}');
+  const [savingMenu, setSavingMenu] = useState(false);
+  const [menuPreviewPageId, setMenuPreviewPageId] = useState<string>('');
+  const [menuPreviewMechanics, setMenuPreviewMechanics] = useState<MechanicInstance[]>([]);
 
   const selectedMechanic = mechanics.find(m => m.id === selectedMechanicId);
 
@@ -250,16 +279,16 @@ export default function AssetEditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assetId]);
 
-  // Auto-fit zoom when page is selected
+  // Auto-fit zoom when page is selected or menu editor is opened
   useEffect(() => {
-    if (selectedPage && viewMode === 'page-editor' && canvasContainerRef.current) {
+    if (canvasContainerRef.current && ((selectedPage && viewMode === 'page-editor') || (viewMode === 'menu-editor' && menuPreviewPageId))) {
       // Small delay to ensure DOM is ready
       const timer = setTimeout(() => {
         handleZoomFit();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [selectedPage?.id, viewMode]);
+  }, [selectedPage?.id, viewMode, menuPreviewPageId]);
 
   // Track page properties changes
   useEffect(() => {
@@ -321,10 +350,11 @@ export default function AssetEditorPage() {
 
   const loadAssetAndPages = async () => {
     try {
-      // Fetch both asset and pages
-      const [assetRes, pagesRes] = await Promise.all([
+      // Fetch asset, pages, and menu config
+      const [assetRes, pagesRes, menuRes] = await Promise.all([
         fetch(`/api/assets/${assetId}`),
-        fetch(`/api/assets/${assetId}/pages`)
+        fetch(`/api/assets/${assetId}/pages`),
+        fetch(`/api/assets/${assetId}/menu`)
       ]);
 
       // Handle asset data
@@ -345,6 +375,13 @@ export default function AssetEditorPage() {
         setPages(pagesData.pages || []);
       } else {
         setPages([]);
+      }
+
+      // Handle menu data
+      if (menuRes.ok) {
+        const menuData = await menuRes.json();
+        setMenuConfig(menuData.menuConfig);
+        setOriginalMenuConfig(JSON.stringify(menuData.menuConfig));
       }
       
       // Step 2: Pages built
@@ -1136,6 +1173,63 @@ export default function AssetEditorPage() {
     }
   };
 
+  const handleSaveMenu = async () => {
+    setSavingMenu(true);
+    setError('');
+
+    try {
+      const res = await fetch(`/api/assets/${assetId}/menu`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(menuConfig),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to save menu');
+      }
+
+      const data = await res.json();
+      setMenuConfig(data.menuConfig);
+      setOriginalMenuConfig(JSON.stringify(data.menuConfig));
+      setMenuChanged(false);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSavingMenu(false);
+    }
+  };
+
+  const handleMenuConfigChange = (newConfig: MenuConfig) => {
+    setMenuConfig(newConfig);
+    setMenuChanged(JSON.stringify(newConfig) !== originalMenuConfig);
+  };
+
+  const handleMenuPreviewPageSelect = async (pageId: string) => {
+    setMenuPreviewPageId(pageId);
+    
+    // Load mechanics for the selected page
+    try {
+      const res = await fetch(`/api/pages/${pageId}`);
+      if (!res.ok) throw new Error('Failed to load page');
+      const data = await res.json();
+      const page = data.page;
+      
+      const loadedMechanics = page.mechanics ? JSON.parse(page.mechanics) : [];
+      setMenuPreviewMechanics(loadedMechanics);
+    } catch (err) {
+      console.error('Failed to load preview page:', err);
+      setMenuPreviewMechanics([]);
+    }
+  };
+
+  // Auto-select first page when entering menu-editor mode
+  useEffect(() => {
+    if (viewMode === 'menu-editor' && pages.length > 0 && !menuPreviewPageId) {
+      handleMenuPreviewPageSelect(pages[0].id);
+    }
+  }, [viewMode, pages]);
+
   const isValidHexColor = (color: string): boolean => {
     return /^#([0-9A-F]{3}){1,2}$/i.test(color);
   };
@@ -1288,13 +1382,31 @@ export default function AssetEditorPage() {
         <div className="w-[15%] min-w-[200px] border-r border-zinc-800 flex flex-col overflow-hidden">
           <div className="p-4 border-b border-zinc-800 flex items-center justify-between flex-shrink-0">
             <h2 className="font-semibold">Pages</h2>
-            <button
-              onClick={handleCreatePage}
-              className="p-1 hover:bg-zinc-800 rounded transition-colors"
-              title="Add Page"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  // Switch to menu editor view
+                  setViewMode('menu-editor');
+                  setSelectedPage(null);
+                  setSelectedMechanicId(null);
+                }}
+                className={`p-1 rounded transition-colors ${
+                  viewMode === 'menu-editor' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'hover:bg-zinc-800 text-zinc-400 hover:text-white'
+                }`}
+                title="Menu Settings"
+              >
+                <MenuIcon className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleCreatePage}
+                className="p-1 hover:bg-zinc-800 rounded transition-colors"
+                title="Add Page"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           
           <div className="flex-1 overflow-y-auto">
@@ -1871,6 +1983,166 @@ export default function AssetEditorPage() {
                 </div>
             </div>
           </div>
+        ) : viewMode === 'menu-editor' ? (
+          /* Menu Editor Canvas with Zoom Controls */
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Zoom Controls for Menu Editor */}
+            <div className="h-10 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-4 flex-shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-500">Zoom:</span>
+                  <button
+                    onClick={handleZoomOut}
+                    className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition-colors"
+                    title="Zoom Out"
+                  >
+                    <ZoomOut className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="text-xs text-white w-10 text-center">{zoom}%</span>
+                  <button
+                    onClick={handleZoomIn}
+                    className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition-colors"
+                    title="Zoom In"
+                  >
+                    <ZoomIn className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={handleZoomFit}
+                    className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition-colors"
+                    title="Fit to Screen"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="text-xs text-zinc-500">
+                  Hold Right-Click to pan / Scroll to zoom in/out
+                </div>
+              </div>
+              <div className="text-xs text-zinc-500">
+                1920×1080px
+              </div>
+            </div>
+            
+            {/* Menu Live Preview with Page Background */}
+            <div 
+              ref={canvasContainerRef}
+              className="flex-1 overflow-hidden relative"
+              onContextMenu={(e) => e.preventDefault()}
+              onMouseDown={(e) => {
+                if (e.button === 2) {
+                  e.preventDefault();
+                  setIsPanning(true);
+                  setPanStart({ x: e.clientX, y: e.clientY });
+                }
+              }}
+              onMouseMove={(e) => {
+                if (isPanning) {
+                  const deltaX = e.clientX - panStart.x;
+                  const deltaY = e.clientY - panStart.y;
+                  setPanOffset({
+                    x: panOffset.x + deltaX,
+                    y: panOffset.y + deltaY,
+                  });
+                  setPanStart({ x: e.clientX, y: e.clientY });
+                }
+              }}
+              onMouseUp={() => {
+                if (isPanning) setIsPanning(false);
+              }}
+              onWheel={(e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -5 : 5;
+                setZoom(prev => Math.max(25, Math.min(200, prev + delta)));
+              }}
+              style={{
+                cursor: isPanning ? 'grabbing' : 'default',
+                backgroundColor: '#09090b',
+                backgroundImage: `
+                  linear-gradient(rgba(75, 205, 62, 0.05) 1px, transparent 1px),
+                  linear-gradient(90deg, rgba(75, 205, 62, 0.05) 1px, transparent 1px)
+                `,
+                backgroundSize: '20px 20px'
+              }}
+            >
+              <div 
+                className="absolute inset-0 flex items-center justify-center p-8"
+                style={{
+                  transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+                }}
+              >
+                {menuPreviewPageId ? (
+                  <div
+                    className="relative border-2 border-zinc-800 rounded-lg overflow-hidden"
+                    style={{
+                      width: '1920px !important' as any,
+                      height: '1080px !important' as any,
+                      minWidth: '1920px',
+                      maxWidth: '1920px',
+                      minHeight: '1080px',
+                      maxHeight: '1080px',
+                      transform: `scale(${zoom / 100})`,
+                      transformOrigin: 'center',
+                      ...(() => {
+                        const previewPage = pages.find(p => p.id === menuPreviewPageId);
+                        if (!previewPage) return { backgroundColor: '#000000' };
+                        
+                        const style: React.CSSProperties = {};
+                        if (previewPage.background_type === 'gradient') {
+                          const colors = previewPage.background_gradient_colors?.split(',') || ['#000', '#fff'];
+                          if (previewPage.background_gradient_type === 'radial') {
+                            style.background = `radial-gradient(circle, ${colors.join(', ')})`;
+                          } else {
+                            style.background = `linear-gradient(${previewPage.background_gradient_angle || 180}deg, ${colors.join(', ')})`;
+                          }
+                        } else if (previewPage.background_type === 'image' || previewPage.background_type === 'animated-image') {
+                          if (previewPage.background_image_url) {
+                            style.backgroundImage = `url(${previewPage.background_image_url})`;
+                            style.backgroundSize = previewPage.background_image_size || 'cover';
+                            style.backgroundPosition = previewPage.background_image_position || 'center';
+                          }
+                        } else {
+                          style.backgroundColor = previewPage.canvas_background_color || '#000000';
+                        }
+                        return style;
+                      })()
+                    }}
+                  >
+                    {/* Render page mechanics */}
+                    {menuPreviewMechanics.map((mechanic) => (
+                      <div
+                        key={mechanic.id}
+                        style={{
+                          position: 'absolute',
+                          left: `${mechanic.x}px`,
+                          top: `${mechanic.y}px`,
+                          width: mechanic.width ? `${mechanic.width}px` : 'auto',
+                          height: mechanic.height ? `${mechanic.height}px` : 'auto',
+                          zIndex: mechanic.layer || 1
+                        }}
+                      >
+                        <MechanicRenderer
+                          mechanic={mechanic}
+                          mode="view"
+                        />
+                      </div>
+                    ))}
+
+                    {/* Menu overlaid on top */}
+                    <Menu
+                      {...menuConfig}
+                      pages={pages.map(p => ({ id: p.id, title: p.title, slug: p.slug }))}
+                      currentPage={pages.find(p => p.id === menuPreviewPageId)?.slug || ''}
+                      mode="view"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-zinc-500 text-center">
+                    <p>No pages available for preview</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         ) : (
           /* Asset Properties */
           <div className="flex-1 overflow-y-auto p-6">
@@ -2349,8 +2621,31 @@ export default function AssetEditorPage() {
                       </div>
                     </div>
 
+                    {/* External Editor Buttons */}
+                    {selectedMechanic && ['accordion', 'tabs', 'gridlayout', 'logogrid', 'avatarcard', 'table', 'testimonial', 'featuregrid', 'pricingcard', 'carousel'].includes(selectedMechanic.type) && (
+                      <div className="pb-4 border-b border-zinc-800">
+                        <button
+                          onClick={() => {
+                            if (selectedMechanic.type === 'accordion') setEditingAccordion(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'tabs') setEditingTabs(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'gridlayout') setEditingGrid(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'logogrid') setEditingLogoGrid(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'avatarcard') setEditingAvatarCard(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'table') setEditingTable(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'testimonial') setEditingTestimonial(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'featuregrid') setEditingFeatureGrid(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'pricingcard') setEditingPricingCard(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'carousel') setEditingCarousel(selectedMechanic.id);
+                          }}
+                          className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors font-medium"
+                        >
+                          Edit {selectedMechanic.type === 'gridlayout' ? 'Grid' : selectedMechanic.type === 'logogrid' ? 'Logos' : selectedMechanic.type === 'avatarcard' ? 'Avatar' : selectedMechanic.type === 'featuregrid' ? 'Features' : selectedMechanic.type === 'pricingcard' ? 'Plans' : selectedMechanic.type === 'testimonial' ? 'Testimonials' : selectedMechanic.type === 'carousel' ? 'Slides' : selectedMechanic.type.charAt(0).toUpperCase() + selectedMechanic.type.slice(1)}
+                        </button>
+                      </div>
+                    )}
+
                     {/* Mechanic-Specific Properties - Skip for complex components with dedicated editors */}
-                    {selectedMechanic && !['tabs', 'accordion', 'gridlayout', 'logogrid'].includes(selectedMechanic.type) && (() => {
+                    {selectedMechanic && !['tabs', 'accordion', 'gridlayout', 'logogrid', 'avatarcard', 'table', 'testimonial', 'featuregrid', 'pricingcard', 'carousel'].includes(selectedMechanic.type) && (() => {
                       const definition = getMechanic(selectedMechanic.type);
                       if (!definition) return null;
                       
@@ -2505,7 +2800,7 @@ export default function AssetEditorPage() {
               })()}
 
                     {/* Custom Array Editors for Complex Components */}
-                    {(selectedMechanic.type === 'tabs' || selectedMechanic.type === 'accordion' || selectedMechanic.type === 'gridlayout' || selectedMechanic.type === 'logogrid' || selectedMechanic.type === 'avatarcard') && (
+                    {(selectedMechanic.type === 'tabs' || selectedMechanic.type === 'accordion' || selectedMechanic.type === 'gridlayout' || selectedMechanic.type === 'logogrid' || selectedMechanic.type === 'avatarcard' || selectedMechanic.type === 'table' || selectedMechanic.type === 'testimonial' || selectedMechanic.type === 'featuregrid') && (
                       <div className="pt-4 mt-4 border-t border-zinc-800">
                         <button
                           onClick={() => {
@@ -2514,14 +2809,17 @@ export default function AssetEditorPage() {
                             else if (selectedMechanic.type === 'gridlayout') setEditingGrid(selectedMechanic.id);
                             else if (selectedMechanic.type === 'logogrid') setEditingLogoGrid(selectedMechanic.id);
                             else if (selectedMechanic.type === 'avatarcard') setEditingAvatarCard(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'table') setEditingTable(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'testimonial') setEditingTestimonial(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'featuregrid') setEditingFeatureGrid(selectedMechanic.id);
                           }}
                           className="w-full px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-medium"
                         >
                           <Settings className="w-4 h-4" />
-                          Edit {selectedMechanic.type === 'tabs' ? 'Tabs' : selectedMechanic.type === 'accordion' ? 'Accordion' : selectedMechanic.type === 'gridlayout' ? 'Grid Layout' : selectedMechanic.type === 'logogrid' ? 'Logo Grid' : 'Avatar Card'}
+                          Edit {selectedMechanic.type === 'tabs' ? 'Tabs' : selectedMechanic.type === 'accordion' ? 'Accordion' : selectedMechanic.type === 'gridlayout' ? 'Grid Layout' : selectedMechanic.type === 'logogrid' ? 'Logo Grid' : selectedMechanic.type === 'avatarcard' ? 'Avatar Card' : selectedMechanic.type === 'table' ? 'Table' : selectedMechanic.type === 'testimonial' ? 'Testimonial' : 'Feature Grid'}
                         </button>
                         <p className="text-xs text-zinc-500 mt-2 text-center">
-                          Opens a dedicated editor for managing {selectedMechanic.type === 'tabs' ? 'tab' : selectedMechanic.type === 'accordion' ? 'accordion' : selectedMechanic.type === 'gridlayout' ? 'grid' : selectedMechanic.type === 'logogrid' ? 'logo' : 'avatar card'} properties
+                          Opens a dedicated editor for managing {selectedMechanic.type === 'tabs' ? 'tab' : selectedMechanic.type === 'accordion' ? 'accordion' : selectedMechanic.type === 'gridlayout' ? 'grid' : selectedMechanic.type === 'logogrid' ? 'logo' : selectedMechanic.type === 'avatarcard' ? 'avatar card' : selectedMechanic.type === 'table' ? 'table' : selectedMechanic.type === 'testimonial' ? 'testimonial' : 'feature'} properties
                         </p>
                       </div>
                     )}
@@ -2731,6 +3029,20 @@ export default function AssetEditorPage() {
               </div>
             </div>
           )
+        ) : viewMode === 'menu-editor' ? (
+          /* Menu Editor Panel */
+          <div className="w-[20%] min-w-[280px] border-l border-zinc-800 bg-zinc-900 flex flex-col overflow-hidden">
+            <MenuEditorPanel
+              config={menuConfig}
+              onChange={handleMenuConfigChange}
+              onSave={handleSaveMenu}
+              saving={savingMenu}
+              changed={menuChanged}
+              pages={pages.map(p => ({ id: p.id, title: p.title, slug: p.slug }))}
+              selectedPageId={menuPreviewPageId}
+              onPageSelect={handleMenuPreviewPageSelect}
+            />
+          </div>
         ) : null}
       </div>
 
@@ -2872,6 +3184,99 @@ export default function AssetEditorPage() {
             setEditingAvatarCard(null);
           }}
           onClose={() => setEditingAvatarCard(null)}
+        />
+      )}
+
+      {editingTable && selectedMechanic && selectedMechanic.type === 'table' && (
+        <TableEditor
+          headers={(() => {
+            try {
+              return JSON.parse(selectedMechanic.props.headers || '[]');
+            } catch {
+              return ['Name', 'Role', 'Email'];
+            }
+          })()}
+          rows={(() => {
+            try {
+              return JSON.parse(selectedMechanic.props.rows || '[]');
+            } catch {
+              return [['', '', '']];
+            }
+          })()}
+          onSave={(headers, rows) => {
+            handleMechanicPropChange('headers', JSON.stringify(headers));
+            handleMechanicPropChange('rows', JSON.stringify(rows));
+            setEditingTable(null);
+          }}
+          onClose={() => setEditingTable(null)}
+        />
+      )}
+
+      {editingTestimonial && selectedMechanic && selectedMechanic.type === 'testimonial' && (
+        <TestimonialEditor
+          testimonials={(() => {
+            try {
+              return JSON.parse(selectedMechanic.props.testimonials || '[]');
+            } catch {
+              return [{id: '1', quote: 'Great!', author: 'User', role: 'Customer', rating: 5, image: ''}];
+            }
+          })()}
+          onSave={(testimonials) => {
+            handleMechanicPropChange('testimonials', JSON.stringify(testimonials));
+            setEditingTestimonial(null);
+          }}
+          onClose={() => setEditingTestimonial(null)}
+        />
+      )}
+
+      {editingFeatureGrid && selectedMechanic && selectedMechanic.type === 'featuregrid' && (
+        <FeatureGridEditor
+          features={(() => {
+            try {
+              return JSON.parse(selectedMechanic.props.features || '[]');
+            } catch {
+              return [{id: '1', icon: 'Zap', title: 'Feature', description: 'Description'}];
+            }
+          })()}
+          onSave={(features) => {
+            handleMechanicPropChange('features', JSON.stringify(features));
+            setEditingFeatureGrid(null);
+          }}
+          onClose={() => setEditingFeatureGrid(null)}
+        />
+      )}
+
+      {editingPricingCard && selectedMechanic && selectedMechanic.type === 'pricingcard' && (
+        <PricingCardEditor
+          plans={(() => {
+            try {
+              return JSON.parse(selectedMechanic.props.plans || '[]');
+            } catch {
+              return [{id: '1', name: 'Starter', price: '$29', period: 'per month', features: ['Feature 1'], highlighted: false, buttonText: 'Get Started', buttonLink: '#'}];
+            }
+          })()}
+          onSave={(plans) => {
+            handleMechanicPropChange('plans', JSON.stringify(plans));
+            setEditingPricingCard(null);
+          }}
+          onClose={() => setEditingPricingCard(null)}
+        />
+      )}
+
+      {editingCarousel && selectedMechanic && selectedMechanic.type === 'carousel' && (
+        <CarouselEditor
+          slides={(() => {
+            try {
+              return JSON.parse(selectedMechanic.props.slides || '[]');
+            } catch {
+              return [{id: '1', type: 'image', imageUrl: 'https://picsum.photos/800/400', caption: 'Slide 1'}];
+            }
+          })()}
+          onSave={(slides) => {
+            handleMechanicPropChange('slides', JSON.stringify(slides));
+            setEditingCarousel(null);
+          }}
+          onClose={() => setEditingCarousel(null)}
         />
       )}
 

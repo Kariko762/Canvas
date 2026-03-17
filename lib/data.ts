@@ -67,6 +67,27 @@ export interface Modal {
   updated_at: number
 }
 
+export interface MenuLink {
+  id: string
+  icon?: string
+  title: string
+  url?: string
+  experienceId?: string
+  description?: string
+  type: 'experience' | 'external'
+}
+
+export interface MenuConfig {
+  enabled: boolean
+  menuType: 'vertical-expanding' | 'burger' | 'fullscreen-split'
+  position: 'top' | 'bottom' | 'left' | 'right'
+  animation: 'slide-down' | 'slide-out' | 'fade' | 'scale'
+  backgroundColor: string
+  textColor: string
+  accentColor: string
+  rightPanelItems: MenuLink[]
+}
+
 export interface Page {
   id: string
   asset_id: string
@@ -255,11 +276,12 @@ export async function createAsset(asset: Omit<Asset, 'created_at' | 'updated_at'
   db.assets.push(newAsset)
   await writeDatabase(db)
   
-  // Create asset directory and initialize empty pages
+  // Create asset directory and initialize empty pages and default menu
   const assetDir = path.join(ASSETS_DIR, newAsset.id)
   await fs.mkdir(assetDir, { recursive: true })
   await writeJsonFile(path.join(assetDir, 'meta.json'), newAsset)
   await writeJsonFile(path.join(assetDir, 'pages.json'), [])
+  await writeJsonFile(path.join(assetDir, 'menu.json'), getDefaultMenuConfig())
   
   return newAsset
 }
@@ -500,4 +522,33 @@ export async function deleteModal(id: string): Promise<boolean> {
   } catch (error) {
     return false
   }
+}
+
+// ============================================
+// Menu functions - asset-level menu configuration
+// ============================================
+
+export function getDefaultMenuConfig(): MenuConfig {
+  return {
+    enabled: true,
+    menuType: 'burger',
+    position: 'top',
+    animation: 'slide-down',
+    backgroundColor: '#1a1a1a',
+    textColor: '#ffffff',
+    accentColor: '#3b82f6',
+    rightPanelItems: []
+  }
+}
+
+export async function getAssetMenu(assetId: string): Promise<MenuConfig> {
+  const menuPath = path.join(ASSETS_DIR, assetId, 'menu.json')
+  const menu = await readJsonFile<MenuConfig>(menuPath, null as any)
+  return menu || getDefaultMenuConfig()
+}
+
+export async function updateAssetMenu(assetId: string, menuConfig: MenuConfig): Promise<MenuConfig> {
+  const menuPath = path.join(ASSETS_DIR, assetId, 'menu.json')
+  await writeJsonFile(menuPath, menuConfig)
+  return menuConfig
 }

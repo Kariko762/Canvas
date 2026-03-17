@@ -15,6 +15,8 @@ export type PropertyType =
   | 'range'
   | 'image'
   | 'modalAsset'
+  | 'boolean'
+  | 'json'
 
 export interface PropertyDefinition {
   type: PropertyType
@@ -26,6 +28,8 @@ export interface PropertyDefinition {
   step?: number // For number/range
   placeholder?: string
   help?: string
+  external?: boolean // For complex properties requiring external editors
+  externalEditor?: string // Name of the external editor component
 }
 
 export interface MechanicDefinition {
@@ -157,6 +161,199 @@ export const MECHANICS_REGISTRY: Record<string, MechanicDefinition> = {
     }
   },
 
+  list: {
+    type: 'list',
+    name: 'List',
+    description: 'Bullet points or numbered lists',
+    category: 'content',
+    icon: 'List',
+    properties: {
+      items: {
+        type: 'textarea',
+        label: 'List Items',
+        defaultValue: 'First item\nSecond item\nThird item',
+        placeholder: 'Enter items, one per line',
+        help: 'Each line becomes a list item'
+      },
+      listStyle: {
+        type: 'select',
+        label: 'List Style',
+        defaultValue: 'bullet',
+        options: [
+          { label: 'Bullet', value: 'bullet' },
+          { label: 'Numbered', value: 'numbered' },
+          { label: 'Checkmark', value: 'checkmark' },
+          { label: 'Arrow', value: 'arrow' }
+        ]
+      },
+      size: {
+        type: 'select',
+        label: 'Text Size',
+        defaultValue: 'base',
+        options: [
+          { label: 'Small', value: 'sm' },
+          { label: 'Base', value: 'base' },
+          { label: 'Large', value: 'lg' },
+          { label: 'Extra Large', value: 'xl' }
+        ]
+      },
+      color: {
+        type: 'color',
+        label: 'Text Color',
+        defaultValue: '#ffffff'
+      },
+      spacing: {
+        type: 'select',
+        label: 'Item Spacing',
+        defaultValue: 'normal',
+        options: [
+          { label: 'Tight', value: 'tight' },
+          { label: 'Normal', value: 'normal' },
+          { label: 'Relaxed', value: 'relaxed' },
+          { label: 'Loose', value: 'loose' }
+        ]
+      },
+      iconColor: {
+        type: 'color',
+        label: 'Icon/Marker Color',
+        defaultValue: '#8b5cf6',
+        help: 'Color for bullet, checkmark, or arrow'
+      }
+    }
+  },
+
+  quote: {
+    type: 'quote',
+    name: 'Quote Block',
+    description: 'Formatted quotation with optional attribution',
+    category: 'content',
+    icon: 'Quote',
+    properties: {
+      quote: {
+        type: 'textarea',
+        label: 'Quote Text',
+        defaultValue: 'The best way to predict the future is to invent it.',
+        placeholder: 'Enter quote text'
+      },
+      author: {
+        type: 'text',
+        label: 'Author',
+        defaultValue: 'Alan Kay',
+        placeholder: 'Author name'
+      },
+      role: {
+        type: 'text',
+        label: 'Role/Title',
+        defaultValue: 'Computer Scientist',
+        placeholder: 'Author role or title'
+      },
+      size: {
+        type: 'select',
+        label: 'Text Size',
+        defaultValue: 'lg',
+        options: [
+          { label: 'Base', value: 'base' },
+          { label: 'Large', value: 'lg' },
+          { label: 'Extra Large', value: 'xl' },
+          { label: '2XL', value: '2xl' }
+        ]
+      },
+      quoteColor: {
+        type: 'color',
+        label: 'Quote Color',
+        defaultValue: '#ffffff'
+      },
+      authorColor: {
+        type: 'color',
+        label: 'Author Color',
+        defaultValue: '#94a3b8'
+      },
+      accentColor: {
+        type: 'color',
+        label: 'Accent Color',
+        defaultValue: '#8b5cf6',
+        help: 'Quote mark color'
+      },
+      style: {
+        type: 'select',
+        label: 'Quote Style',
+        defaultValue: 'default',
+        options: [
+          { label: 'Default', value: 'default' },
+          { label: 'Bordered', value: 'bordered' },
+          { label: 'Card', value: 'card' }
+        ]
+      }
+    }
+  },
+
+  codeblock: {
+    type: 'codeblock',
+    name: 'Code Block',
+    description: 'Syntax-highlighted code snippet',
+    category: 'content',
+    icon: 'Code',
+    properties: {
+      code: {
+        type: 'textarea',
+        label: 'Code',
+        defaultValue: 'const greeting = "Hello, World!";\nconsole.log(greeting);',
+        placeholder: 'Enter code snippet'
+      },
+      language: {
+        type: 'select',
+        label: 'Language',
+        defaultValue: 'javascript',
+        options: [
+          { label: 'JavaScript', value: 'javascript' },
+          { label: 'TypeScript', value: 'typescript' },
+          { label: 'Python', value: 'python' },
+          { label: 'Java', value: 'java' },
+          { label: 'C#', value: 'csharp' },
+          { label: 'Go', value: 'go' },
+          { label: 'Rust', value: 'rust' },
+          { label: 'HTML', value: 'html' },
+          { label: 'CSS', value: 'css' },
+          { label: 'JSON', value: 'json' },
+          { label: 'Markdown', value: 'markdown' },
+          { label: 'Shell', value: 'shell' },
+          { label: 'SQL', value: 'sql' }
+        ]
+      },
+      theme: {
+        type: 'select',
+        label: 'Theme',
+        defaultValue: 'dark',
+        options: [
+          { label: 'Dark', value: 'dark' },
+          { label: 'Light', value: 'light' }
+        ]
+      },
+      showLineNumbers: {
+        type: 'boolean',
+        label: 'Show Line Numbers',
+        defaultValue: true
+      },
+      fontSize: {
+        type: 'select',
+        label: 'Font Size',
+        defaultValue: 'sm',
+        options: [
+          { label: 'Extra Small', value: 'xs' },
+          { label: 'Small', value: 'sm' },
+          { label: 'Base', value: 'base' },
+          { label: 'Large', value: 'lg' }
+        ]
+      },
+      filename: {
+        type: 'text',
+        label: 'Filename (optional)',
+        defaultValue: '',
+        placeholder: 'index.js'
+      }
+    }
+  },
+
   // ============================================================================
   // MEDIA MECHANICS
   // ============================================================================
@@ -206,6 +403,123 @@ export const MECHANICS_REGISTRY: Record<string, MechanicDefinition> = {
       shadow: {
         type: 'toggle',
         label: 'Drop Shadow',
+        defaultValue: true
+      }
+    }
+  },
+
+  container: {
+    type: 'container',
+    name: 'Container',
+    description: 'Wrapper with padding and max-width',
+    category: 'layout',
+    icon: 'Box',
+    properties: {
+      maxWidth: {
+        type: 'select',
+        label: 'Max Width',
+        defaultValue: 'xl',
+        options: [
+          { label: 'Small (640px)', value: 'sm' },
+          { label: 'Medium (768px)', value: 'md' },
+          { label: 'Large (1024px)', value: 'lg' },
+          { label: 'Extra Large (1280px)', value: 'xl' },
+          { label: '2XL (1536px)', value: '2xl' },
+          { label: 'Full Width', value: 'full' }
+        ]
+      },
+      padding: {
+        type: 'select',
+        label: 'Padding',
+        defaultValue: 'medium',
+        options: [
+          { label: 'None', value: 'none' },
+          { label: 'Small', value: 'small' },
+          { label: 'Medium', value: 'medium' },
+          { label: 'Large', value: 'large' },
+          { label: 'Extra Large', value: 'xlarge' }
+        ]
+      },
+      centerContent: {
+        type: 'boolean',
+        label: 'Center Horizontally',
+        defaultValue: true
+      },
+      backgroundColor: {
+        type: 'color',
+        label: 'Background Color',
+        defaultValue: 'transparent'
+      },
+      borderRadius: {
+        type: 'select',
+        label: 'Border Radius',
+        defaultValue: 'none',
+        options: [
+          { label: 'None', value: 'none' },
+          { label: 'Small', value: 'sm' },
+          { label: 'Medium', value: 'md' },
+          { label: 'Large', value: 'lg' },
+          { label: 'Extra Large', value: 'xl' }
+        ]
+      }
+    }
+  },
+
+  columns: {
+    type: 'columns',
+    name: 'Columns',
+    description: 'Multi-column layout wrapper',
+    category: 'layout',
+    icon: 'Columns',
+    properties: {
+      columnCount: {
+        type: 'select',
+        label: 'Columns',
+        defaultValue: '2',
+        options: [
+          { label: '2 Columns', value: '2' },
+          { label: '3 Columns', value: '3' },
+          { label: '4 Columns', value: '4' }
+        ]
+      },
+      gap: {
+        type: 'select',
+        label: 'Gap',
+        defaultValue: 'medium',
+        options: [
+          { label: 'None', value: 'none' },
+          { label: 'Small', value: 'small' },
+          { label: 'Medium', value: 'medium' },
+          { label: 'Large', value: 'large' },
+          { label: 'Extra Large', value: 'xlarge' }
+        ]
+      },
+      columnWidth: {
+        type: 'select',
+        label: 'Column Width',
+        defaultValue: 'equal',
+        options: [
+          { label: 'Equal', value: 'equal' },
+          { label: '30/70', value: '30-70' },
+          { label: '40/60', value: '40-60' },
+          { label: '60/40', value: '60-40' },
+          { label: '70/30', value: '70-30' }
+        ]
+      },
+      verticalAlign: {
+        type: 'select',
+        label: 'Vertical Align',
+        defaultValue: 'start',
+        options: [
+          { label: 'Top', value: 'start' },
+          { label: 'Center', value: 'center' },
+          { label: 'Bottom', value: 'end' },
+          { label: 'Stretch', value: 'stretch' }
+        ]
+      },
+      responsive: {
+        type: 'boolean',
+        label: 'Stack on Mobile',
         defaultValue: true
       }
     }
@@ -474,9 +788,170 @@ export const MECHANICS_REGISTRY: Record<string, MechanicDefinition> = {
     }
   },
 
+  badge: {
+    type: 'badge',
+    name: 'Badge',
+    description: 'Labels and tags for categorization',
+    category: 'interactive',
+    icon: 'Tag',
+    properties: {
+      text: {
+        type: 'text',
+        label: 'Badge Text',
+        defaultValue: 'New',
+        placeholder: 'Enter badge text'
+      },
+      variant: {
+        type: 'select',
+        label: 'Variant',
+        defaultValue: 'default',
+        options: [
+          { label: 'Default', value: 'default' },
+          { label: 'Primary', value: 'primary' },
+          { label: 'Success', value: 'success' },
+          { label: 'Warning', value: 'warning' },
+          { label: 'Error', value: 'error' },
+          { label: 'Info', value: 'info' }
+        ]
+      },
+      size: {
+        type: 'select',
+        label: 'Size',
+        defaultValue: 'medium',
+        options: [
+          { label: 'Small', value: 'small' },
+          { label: 'Medium', value: 'medium' },
+          { label: 'Large', value: 'large' }
+        ]
+      },
+      outlined: {
+        type: 'boolean',
+        label: 'Outlined Style',
+        defaultValue: false
+      },
+      customColor: {
+        type: 'color',
+        label: 'Custom Color (optional)',
+        defaultValue: '',
+        help: 'Override variant color'
+      }
+    }
+  },
+
+  tooltip: {
+    type: 'tooltip',
+    name: 'Tooltip',
+    description: 'Hover info popup',
+    category: 'interactive',
+    icon: 'Info',
+    properties: {
+      text: {
+        type: 'text',
+        label: 'Trigger Text',
+        defaultValue: 'Hover me',
+        placeholder: 'Text to hover over'
+      },
+      tooltipContent: {
+        type: 'textarea',
+        label: 'Tooltip Content',
+        defaultValue: 'Additional information appears here',
+        placeholder: 'Enter tooltip content'
+      },
+      position: {
+        type: 'select',
+        label: 'Position',
+        defaultValue: 'top',
+        options: [
+          { label: 'Top', value: 'top' },
+          { label: 'Bottom', value: 'bottom' },
+          { label: 'Left', value: 'left' },
+          { label: 'Right', value: 'right' }
+        ]
+      },
+      backgroundColor: {
+        type: 'color',
+        label: 'Background Color',
+        defaultValue: '#1f2937'
+      },
+      textColor: {
+        type: 'color',
+        label: 'Text Color',
+        defaultValue: '#ffffff'
+      }
+    }
+  },
+
   // ============================================================================
   // DATA & VISUALIZATION MECHANICS
   // ============================================================================
+
+  table: {
+    type: 'table',
+    name: 'Table',
+    description: 'Data table with rows and columns',
+    category: 'data',
+    icon: 'Table',
+    properties: {
+      headers: {
+        type: 'json',
+        label: 'Column Headers',
+        defaultValue: JSON.stringify(['Name', 'Role', 'Email']),
+        help: 'JSON array of column headers'
+      },
+      rows: {
+        type: 'json',
+        label: 'Table Rows',
+        defaultValue: JSON.stringify([
+          ['John Doe', 'Engineer', 'john@example.com'],
+          ['Jane Smith', 'Designer', 'jane@example.com'],
+          ['Bob Johnson', 'Manager', 'bob@example.com']
+        ]),
+        help: 'JSON array of row arrays',
+        external: true,
+        externalEditor: 'table'
+      },
+      striped: {
+        type: 'boolean',
+        label: 'Striped Rows',
+        defaultValue: true
+      },
+      bordered: {
+        type: 'boolean',
+        label: 'Show Borders',
+        defaultValue: true
+      },
+      compact: {
+        type: 'boolean',
+        label: 'Compact Mode',
+        defaultValue: false
+      },
+      headerColor: {
+        type: 'color',
+        label: 'Header Background',
+        defaultValue: '#1e293b'
+      },
+      headerTextColor: {
+        type: 'color',
+        label: 'Header Text Color',
+        defaultValue: '#ffffff'
+      },
+      rowColor: {
+        type: 'color',
+        label: 'Row Background',
+        defaultValue: '#0f172a'
+      },
+      rowTextColor: {
+        type: 'color',
+        label: 'Row Text Color',
+        defaultValue: '#e2e8f0'
+      },
+      borderColor: {
+        type: 'color',
+        label: 'Border Color',
+        defaultValue: '#334155'
+      }
+    }
+  },
 
   statscounter: {
     type: 'statscounter',
@@ -671,6 +1146,312 @@ export const MECHANICS_REGISTRY: Record<string, MechanicDefinition> = {
         defaultValue: '',
         placeholder: 'Leave empty for percentage',
         help: 'Override percentage with custom text'
+      },
+      icon: {
+        type: 'toggle',
+        label: 'Show Icon',
+        defaultValue: true
+      }
+    }
+  },
+
+  testimonial: {
+    type: 'testimonial',
+    name: 'Testimonial',
+    description: 'Customer testimonial with rating',
+    category: 'data',
+    icon: 'MessageSquareQuote',
+    properties: {
+      testimonials: {
+        type: 'json',
+        label: 'Testimonials',
+        defaultValue: JSON.stringify([
+          {
+            id: '1',
+            quote: 'This product has transformed our business. Highly recommended!',
+            author: 'Sarah Johnson',
+            role: 'CEO, TechCorp',
+            rating: 5,
+            image: 'https://i.pravatar.cc/150?img=1'
+          }
+        ]),
+        help: 'JSON array of testimonials',
+        external: true,
+        externalEditor: 'testimonial'
+      },
+      displayStyle: {
+        type: 'select',
+        label: 'Display Style',
+        defaultValue: 'card',
+        options: [
+          { label: 'Card', value: 'card' },
+          { label: 'Quote', value: 'quote' },
+          { label: 'Compact', value: 'compact' }
+        ]
+      },
+      showRating: {
+        type: 'boolean',
+        label: 'Show Rating',
+        defaultValue: true
+      },
+      showImage: {
+        type: 'boolean',
+        label: 'Show Image',
+        defaultValue: true
+      },
+      backgroundColor: {
+        type: 'color',
+        label: 'Card Background',
+        defaultValue: '#1e293b'
+      },
+      textColor: {
+        type: 'color',
+        label: 'Text Color',
+        defaultValue: '#ffffff'
+      },
+      accentColor: {
+        type: 'color',
+        label: 'Accent Color',
+        defaultValue: '#fbbf24'
+      }
+    }
+  },
+
+  featuregrid: {
+    type: 'featuregrid',
+    name: 'Feature Grid',
+    description: 'Grid of features with icons',
+    category: 'data',
+    icon: 'Grid2x2',
+    properties: {
+      features: {
+        type: 'json',
+        label: 'Features',
+        defaultValue: JSON.stringify([
+          {
+            id: '1',
+            icon: 'Zap',
+            title: 'Fast Performance',
+            description: 'Lightning-fast load times and smooth interactions.'
+          },
+          {
+            id: '2',
+            icon: 'Shield',
+            title: 'Secure',
+            description: 'Enterprise-grade security to protect your data.'
+          },
+          {
+            id: '3',
+            icon: 'Users',
+            title: 'Team Collaboration',
+            description: 'Work together seamlessly with your team.'
+          }
+        ]),
+        help: 'JSON array of features',
+        external: true,
+        externalEditor: 'featuregrid'
+      },
+      columns: {
+        type: 'select',
+        label: 'Columns',
+        defaultValue: '3',
+        options: [
+          { label: '2 Columns', value: '2' },
+          { label: '3 Columns', value: '3' },
+          { label: '4 Columns', value: '4' }
+        ]
+      },
+      gap: {
+        type: 'select',
+        label: 'Gap',
+        defaultValue: 'medium',
+        options: [
+          { label: 'Small', value: 'small' },
+          { label: 'Medium', value: 'medium' },
+          { label: 'Large', value: 'large' }
+        ]
+      },
+      iconSize: {
+        type: 'select',
+        label: 'Icon Size',
+        defaultValue: 'medium',
+        options: [
+          { label: 'Small', value: 'small' },
+          { label: 'Medium', value: 'medium' },
+          { label: 'Large', value: 'large' }
+        ]
+      },
+      iconColor: {
+        type: 'color',
+        label: 'Icon Color',
+        defaultValue: '#8b5cf6'
+      },
+      backgroundColor: {
+        type: 'color',
+        label: 'Card Background',
+        defaultValue: '#1e293b'
+      },
+      textColor: {
+        type: 'color',
+        label: 'Text Color',
+        defaultValue: '#ffffff'
+      },
+      borderRadius: {
+        type: 'select',
+        label: 'Border Radius',
+        defaultValue: 'lg',
+        options: [
+          { label: 'None', value: 'none' },
+          { label: 'Small', value: 'sm' },
+          { label: 'Medium', value: 'md' },
+          { label: 'Large', value: 'lg' },
+          { label: 'Extra Large', value: 'xl' }
+        ]
+      }
+    }
+  },
+
+  pricingcard: {
+    type: 'pricingcard',
+    name: 'Pricing Card',
+    description: 'Pricing plan card with features',
+    category: 'data',
+    icon: 'DollarSign',
+    properties: {
+      plans: {
+        type: 'json',
+        label: 'Pricing Plans',
+        defaultValue: JSON.stringify([
+          {
+            id: '1',
+            name: 'Starter',
+            price: '$29',
+            period: 'per month',
+            features: ['10 Projects', '5GB Storage', 'Basic Support', 'Email Reports'],
+            highlighted: false,
+            buttonText: 'Get Started',
+            buttonLink: '#'
+          },
+          {
+            id: '2',
+            name: 'Pro',
+            price: '$79',
+            period: 'per month',
+            features: ['Unlimited Projects', '50GB Storage', 'Priority Support', 'Advanced Analytics', 'API Access'],
+            highlighted: true,
+            buttonText: 'Start Pro Trial',
+            buttonLink: '#'
+          },
+          {
+            id: '3',
+            name: 'Enterprise',
+            price: '$199',
+            period: 'per month',
+            features: ['Unlimited Everything', 'Dedicated Support', 'Custom Integration', 'SLA Guarantee'],
+            highlighted: false,
+            buttonText: 'Contact Sales',
+            buttonLink: '#'
+          }
+        ]),
+        help: 'JSON array of pricing plans',
+        external: true,
+        externalEditor: 'pricingcard'
+      },
+      columns: {
+        type: 'select',
+        label: 'Columns',
+        defaultValue: '3',
+        options: [
+          { label: '2 Columns', value: '2' },
+          { label: '3 Columns', value: '3' },
+          { label: '4 Columns', value: '4' }
+        ]
+      },
+      cardBackground: {
+        type: 'color',
+        label: 'Card Background',
+        defaultValue: '#1e293b'
+      },
+      highlightColor: {
+        type: 'color',
+        label: 'Highlight Color',
+        defaultValue: '#8b5cf6'
+      },
+      textColor: {
+        type: 'color',
+        label: 'Text Color',
+        defaultValue: '#ffffff'
+      }
+    }
+  },
+
+  carousel: {
+    type: 'carousel',
+    name: 'Carousel',
+    description: 'Image/content slider',
+    category: 'media',
+    icon: 'Images',
+    properties: {
+      slides: {
+        type: 'json',
+        label: 'Slides',
+        defaultValue: JSON.stringify([
+          {
+            id: '1',
+            type: 'image',
+            imageUrl: 'https://picsum.photos/800/400?random=1',
+            caption: 'Slide 1'
+          },
+          {
+            id: '2',
+            type: 'image',
+            imageUrl: 'https://picsum.photos/800/400?random=2',
+            caption: 'Slide 2'
+          },
+          {
+            id: '3',
+            type: 'image',
+            imageUrl: 'https://picsum.photos/800/400?random=3',
+            caption: 'Slide 3'
+          }
+        ]),
+        help: 'JSON array of slides',
+        external: true,
+        externalEditor: 'carousel'
+      },
+      autoplay: {
+        type: 'boolean',
+        label: 'Autoplay',
+        defaultValue: true
+      },
+      interval: {
+        type: 'number',
+        label: 'Autoplay Interval (ms)',
+        defaultValue: 5000,
+        min: 1000,
+        max: 10000,
+        step: 500
+      },
+      showDots: {
+        type: 'boolean',
+        label: 'Show Dots',
+        defaultValue: true
+      },
+      showArrows: {
+        type: 'boolean',
+        label: 'Show Arrows',
+        defaultValue: true
+      },
+      height: {
+        type: 'select',
+        label: 'Height',
+        defaultValue: 'medium',
+        options: [
+          { label: 'Small (300px)', value: 'small' },
+          { label: 'Medium (400px)', value: 'medium' },
+          { label: 'Large (500px)', value: 'large' },
+          { label: 'Extra Large (600px)', value: 'xlarge' }
+        ]
       }
     }
   },
@@ -1194,6 +1975,125 @@ export const MECHANICS_REGISTRY: Record<string, MechanicDefinition> = {
       }
     }
   },
+
+  ctacard: {
+    type: 'ctacard',
+    name: 'CTA Card',
+    description: 'Call-to-action card with headline, text, and button',
+    category: 'interactive',
+    icon: 'SquareArrowOutUpRight',
+    properties: {
+      headline: {
+        type: 'text',
+        label: 'Headline',
+        defaultValue: 'Ready to Get Started?',
+        placeholder: 'Enter headline'
+      },
+      description: {
+        type: 'textarea',
+        label: 'Description',
+        defaultValue: 'Join thousands of customers who trust us to deliver exceptional results.',
+        placeholder: 'Enter description'
+      },
+      buttonText: {
+        type: 'text',
+        label: 'Button Text',
+        defaultValue: 'Get Started',
+        placeholder: 'Button label'
+      },
+      buttonLink: {
+        type: 'text',
+        label: 'Button Link',
+        defaultValue: '#',
+        placeholder: 'URL or page slug'
+      },
+      alignment: {
+        type: 'select',
+        label: 'Text Alignment',
+        defaultValue: 'center',
+        options: [
+          { label: 'Left', value: 'left' },
+          { label: 'Center', value: 'center' },
+          { label: 'Right', value: 'right' }
+        ]
+      },
+      backgroundColor: {
+        type: 'color',
+        label: 'Background Color',
+        defaultValue: '#1e293b'
+      },
+      textColor: {
+        type: 'color',
+        label: 'Text Color',
+        defaultValue: '#ffffff'
+      },
+      buttonColor: {
+        type: 'color',
+        label: 'Button Color',
+        defaultValue: '#8b5cf6'
+      },
+      buttonTextColor: {
+        type: 'color',
+        label: 'Button Text Color',
+        defaultValue: '#ffffff'
+      },
+      borderRadius: {
+        type: 'select',
+        label: 'Border Radius',
+        defaultValue: 'lg',
+        options: [
+          { label: 'None', value: 'none' },
+          { label: 'Small', value: 'sm' },
+          { label: 'Medium', value: 'md' },
+          { label: 'Large', value: 'lg' },
+          { label: 'Extra Large', value: 'xl' }
+        ]
+      }
+    }
+  },
+
+  alert: {
+    type: 'alert',
+    name: 'Alert',
+    description: 'Info, warning, error, or success notifications',
+    category: 'interactive',
+    icon: 'AlertCircle',
+    properties: {
+      message: {
+        type: 'textarea',
+        label: 'Message',
+        defaultValue: 'This is an important notification.',
+        placeholder: 'Enter alert message'
+      },
+      type: {
+        type: 'select',
+        label: 'Alert Type',
+        defaultValue: 'info',
+        options: [
+          { label: 'Info', value: 'info' },
+          { label: 'Success', value: 'success' },
+          { label: 'Warning', value: 'warning' },
+          { label: 'Error', value: 'error' }
+        ]
+      },
+      dismissible: {
+        type: 'boolean',
+        label: 'Dismissible',
+        defaultValue: true
+      },
+      bordered: {
+        type: 'boolean',
+        label: 'Show Border',
+        defaultValue: true
+      },
+      icon: {
+        type: 'boolean',
+        label: 'Show Icon',
+        defaultValue: true
+      }
+    }
+  },
+
   splitscreen: {
     type: 'splitscreen',
     name: 'Split Screen',
