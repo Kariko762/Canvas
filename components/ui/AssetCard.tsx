@@ -23,7 +23,16 @@ export function AssetCard({ asset }: AssetCardProps) {
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    showLoading(); // Uses TechLoader (default)
+    
+    // Show loading overlay with progress steps
+    const steps = [
+      { id: 'framework', label: 'Loading Framework', completed: false },
+      { id: 'pages', label: 'Building Pages', completed: false },
+      { id: 'modals', label: 'Collating Modals', completed: false },
+      { id: 'apis', label: 'Testing APIs', completed: false },
+    ];
+    
+    showLoading(steps);
     router.push(`/admin/assets/${asset.id}`);
   };
 

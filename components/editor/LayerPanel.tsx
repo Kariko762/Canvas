@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Trash2, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowUpToLine, ArrowDownToLine } from 'lucide-react';
 
 interface MechanicInstance {
   id: string;
@@ -17,7 +17,9 @@ interface LayerPanelProps {
   selectedMechanicId: string | null;
   onSelectMechanic: (id: string) => void;
   onDeleteMechanic: (id: string) => void;
-  onMoveLayer: (id: string, direction: 'up' | 'down') => void;
+  onMoveLayer: (id: string, direction: 'up' | 'down', steps?: number) => void;
+  onSendToFront?: (id: string) => void;
+  onSendToBack?: (id: string) => void;
 }
 
 export function LayerPanel({
@@ -26,6 +28,8 @@ export function LayerPanel({
   onSelectMechanic,
   onDeleteMechanic,
   onMoveLayer,
+  onSendToFront,
+  onSendToBack,
 }: LayerPanelProps) {
   // Sort mechanics by layer (lowest first - 1 is front)
   const sortedMechanics = [...mechanics].sort((a, b) => a.layer - b.layer);
@@ -60,6 +64,30 @@ export function LayerPanel({
                   </div>
                   
                   <div className="flex items-center gap-1 ml-2">
+                    {onSendToFront && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSendToFront(mechanic.id);
+                        }}
+                        disabled={index === 0}
+                        className="p-1 hover:bg-zinc-700 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Send to front"
+                      >
+                        <ArrowUpToLine className="w-3 h-3" />
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMoveLayer(mechanic.id, 'up', 2);
+                      }}
+                      disabled={index === 0}
+                      className="p-1 hover:bg-zinc-700 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Move forward 2 layers"
+                    >
+                      <ChevronsUp className="w-3 h-3" />
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -67,7 +95,7 @@ export function LayerPanel({
                       }}
                       disabled={index === 0}
                       className="p-1 hover:bg-zinc-700 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Move forward (lower layer number)"
+                      title="Move forward 1 layer"
                     >
                       <ChevronUp className="w-3 h-3" />
                     </button>
@@ -78,10 +106,34 @@ export function LayerPanel({
                       }}
                       disabled={index === sortedMechanics.length - 1}
                       className="p-1 hover:bg-zinc-700 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Move backward (higher layer number)"
+                      title="Move backward 1 layer"
                     >
                       <ChevronDown className="w-3 h-3" />
                     </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMoveLayer(mechanic.id, 'down', 2);
+                      }}
+                      disabled={index === sortedMechanics.length - 1}
+                      className="p-1 hover:bg-zinc-700 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Move backward 2 layers"
+                    >
+                      <ChevronsDown className="w-3 h-3" />
+                    </button>
+                    {onSendToBack && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSendToBack(mechanic.id);
+                        }}
+                        disabled={index === sortedMechanics.length - 1}
+                        className="p-1 hover:bg-zinc-700 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Send to back"
+                      >
+                        <ArrowDownToLine className="w-3 h-3" />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

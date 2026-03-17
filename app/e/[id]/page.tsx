@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, ArrowRight, ArrowLeftCircle, Maximize } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowLeftCircle, Maximize, Minimize } from 'lucide-react'
 import { MechanicRenderer } from '@/components/mechanics/MechanicRenderer'
 
 const CANVAS_WIDTH = 1920
@@ -68,6 +68,7 @@ export default function AssetViewerPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [canvasScale, setCanvasScale] = useState(1)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   // Calculate canvas scale to fit viewport - prioritize height
   useEffect(() => {
@@ -155,6 +156,16 @@ export default function AssetViewerPage() {
       document.exitFullscreen()
     }
   }
+
+  // Track fullscreen state changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
 
   // Keyboard navigation
   useEffect(() => {
@@ -265,9 +276,13 @@ export default function AssetViewerPage() {
       <button
         onClick={handleFullscreen}
         className="absolute top-4 right-4 z-50 p-3 bg-black/20 hover:bg-black/70 text-white/40 hover:text-white rounded-lg backdrop-blur-sm transition-all"
-        title="Toggle Fullscreen"
+        title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
       >
-        <Maximize className="w-5 h-5" />
+        {isFullscreen ? (
+          <Minimize className="w-5 h-5" />
+        ) : (
+          <Maximize className="w-5 h-5" />
+        )}
       </button>
 
       {/* Fixed Canvas Container - 1920x1080 scaled to fit viewport */}

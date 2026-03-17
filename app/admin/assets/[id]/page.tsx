@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { nanoid } from 'nanoid';
 import { useConfirm } from '@/components/ui/useConfirm';
 import { useUnsavedChanges } from '@/components/ui/useUnsavedChanges';
-import { CircularLoader } from '@/components/ui/CircularLoader';
 import { ColorPicker } from '@/components/ui/ColorPicker';
 import { PublishModal } from '@/components/ui/PublishModal';
 import { MechanicRenderer } from '@/components/mechanics/MechanicRenderer';
@@ -17,6 +16,7 @@ import { AccordionEditor } from '@/components/editor/AccordionEditor';
 import { TabsEditor } from '@/components/editor/TabsEditor';
 import { GridEditor } from '@/components/editor/GridEditor';
 import { LogoGridEditor } from '@/components/editor/LogoGridEditor';
+import { AvatarCardEditor } from '@/components/editor/AvatarCardEditor';
 import { useGlobalLoading } from '@/components/ui/GlobalLoadingContext';
 import { 
   getAllMechanics, 
@@ -80,7 +80,7 @@ type ViewMode = 'asset' | 'page-editor' | 'page-properties';
 export default function AssetEditorPage() {
   const params = useParams();
   const router = useRouter();
-  const { hideLoading, showLoading, setProgress } = useGlobalLoading();
+  const { hideLoading, completeStep } = useGlobalLoading();
   const assetId = params.id as string;
   
   const [asset, setAsset] = useState<Asset | null>(null);
@@ -158,6 +158,7 @@ export default function AssetEditorPage() {
   const [availableModals, setAvailableModals] = useState<Array<{ id: string; title: string; slug: string }>>([]);
   const [editingGrid, setEditingGrid] = useState<string | null>(null);
   const [editingLogoGrid, setEditingLogoGrid] = useState<string | null>(null);
+  const [editingAvatarCard, setEditingAvatarCard] = useState<string | null>(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
 
   const selectedMechanic = mechanics.find(m => m.id === selectedMechanicId);
@@ -239,14 +240,14 @@ export default function AssetEditorPage() {
     };
   }, [draggingMechanicId, resizingMechanic, dragOffset, mechanics, zoom]);
 
-  // Show loading overlay immediately on mount
+  // Load asset and pages when component mounts
   useEffect(() => {
-    showLoading(); // Uses TechLoader (default)
-    setProgress(0);
-  }, []);
-
-  useEffect(() => {
+    // Step 1: Framework loaded (component mounted)
+    completeStep('framework');
+    
+    // Start loading data
     loadAssetAndPages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assetId]);
 
   // Auto-fit zoom when page is selected
@@ -319,27 +320,12 @@ export default function AssetEditorPage() {
   }, [asset?.workspace_id]);
 
   const loadAssetAndPages = async () => {
-    setLoading(true);
-    
-    // Smooth progress animation
-    const smoothProgress = async () => {
-      for (let i = 10; i <= 40; i += 2) {
-        setProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-    };
-    smoothProgress();
-    
     try {
-      // Load both asset and pages in parallel
-      setProgress(45);
+      // Fetch both asset and pages
       const [assetRes, pagesRes] = await Promise.all([
         fetch(`/api/assets/${assetId}`),
         fetch(`/api/assets/${assetId}/pages`)
       ]);
-
-      setProgress(60);
-      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Handle asset data
       if (!assetRes.ok) throw new Error('Failed to load asset');
@@ -353,9 +339,6 @@ export default function AssetEditorPage() {
       setCanvasBackgroundColor(asset.canvas_background_color || '#ffffff');
       setCanvasTextColor(asset.canvas_text_color || '#000000');
 
-      setProgress(75);
-      await new Promise(resolve => setTimeout(resolve, 100));
-
       // Handle pages data
       if (pagesRes.ok) {
         const pagesData = await pagesRes.json();
@@ -363,20 +346,26 @@ export default function AssetEditorPage() {
       } else {
         setPages([]);
       }
-
-      setProgress(90);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Step 2: Pages built
+      completeStep('pages');
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Step 3: Modals collated
+      completeStep('modals');
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Step 4: APIs tested
+      completeStep('apis');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
     } catch (err) {
       setError('Failed to load asset');
       console.error('Load error:', err);
     } finally {
       setLoading(false);
-      // Set to 100% and let hideLoading handle the pause
-      setProgress(100);
-      // Small delay to ensure progress updates, then hide (which pauses for 2s)
-      setTimeout(() => {
-        hideLoading();
-      }, 200);
+      // Hide global loading after brief pause
+      setTimeout(() => hideLoading(), 500);
     }
   };
 
@@ -868,25 +857,90 @@ export default function AssetEditorPage() {
     setSelectedMechanicId(mechanicId);
   };
 
-  const handleMoveLayer = (id: string, direction: 'up' | 'down') => {
-    const sortedMechanics = [...mechanics].sort((a, b) => a.layer - b.layer);
-    const currentIndex = sortedMechanics.findIndex(m => m.id === id);
-    
-    if (currentIndex === -1) return;
-    
-    if (direction === 'up' && currentIndex === 0) return; // Already at front
-    if (direction === 'down' && currentIndex === sortedMechanics.length - 1) return; // Already at back
-    
-    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    const currentMechanic = sortedMechanics[currentIndex];
-    const targetMechanic = sortedMechanics[targetIndex];
-    
-    // Swap layer values
-    setMechanics(mechanics.map(m => {
-      if (m.id === currentMechanic.id) return { ...m, layer: targetMechanic.layer };
-      if (m.id === targetMechanic.id) return { ...m, layer: currentMechanic.layer };
-      return m;
-    }));
+  const handleMoveLayer = (id: string, direction: 'up' | 'down', steps: number = 1) => {
+    setMechanics(prevMechanics => {
+      // Sort by layer to get visual order
+      const sortedMechanics = [...prevMechanics].sort((a, b) => a.layer - b.layer);
+      const currentIndex = sortedMechanics.findIndex(m => m.id === id);
+      
+      if (currentIndex === -1) return prevMechanics;
+      
+      // Calculate target index with bounds checking
+      let targetIndex = direction === 'up' 
+        ? Math.max(0, currentIndex - steps)
+        : Math.min(sortedMechanics.length - 1, currentIndex + steps);
+      
+      // No change needed
+      if (targetIndex === currentIndex) return prevMechanics;
+      
+      // Remove element from current position and insert at target
+      const [movedElement] = sortedMechanics.splice(currentIndex, 1);
+      sortedMechanics.splice(targetIndex, 0, movedElement);
+      
+      // Renumber all layers sequentially
+      const layerMap = new Map<string, number>();
+      sortedMechanics.forEach((mech, index) => {
+        layerMap.set(mech.id, index + 1);
+      });
+      
+      // Apply new layer numbers to all mechanics
+      return prevMechanics.map(m => ({
+        ...m,
+        layer: layerMap.get(m.id) || m.layer
+      }));
+    });
+    setMechanicsChanged(true);
+  };
+
+  const handleSendToFront = (id: string) => {
+    setMechanics(prevMechanics => {
+      const sortedMechanics = [...prevMechanics].sort((a, b) => a.layer - b.layer);
+      const currentIndex = sortedMechanics.findIndex(m => m.id === id);
+      
+      if (currentIndex === -1 || currentIndex === 0) return prevMechanics; // Already at front
+      
+      // Remove element and insert at front (index 0)
+      const [movedElement] = sortedMechanics.splice(currentIndex, 1);
+      sortedMechanics.unshift(movedElement);
+      
+      // Renumber all layers sequentially
+      const layerMap = new Map<string, number>();
+      sortedMechanics.forEach((mech, index) => {
+        layerMap.set(mech.id, index + 1);
+      });
+      
+      // Apply new layer numbers to all mechanics
+      return prevMechanics.map(m => ({
+        ...m,
+        layer: layerMap.get(m.id) || m.layer
+      }));
+    });
+    setMechanicsChanged(true);
+  };
+
+  const handleSendToBack = (id: string) => {
+    setMechanics(prevMechanics => {
+      const sortedMechanics = [...prevMechanics].sort((a, b) => a.layer - b.layer);
+      const currentIndex = sortedMechanics.findIndex(m => m.id === id);
+      
+      if (currentIndex === -1 || currentIndex === sortedMechanics.length - 1) return prevMechanics; // Already at back
+      
+      // Remove element and insert at back (end of array)
+      const [movedElement] = sortedMechanics.splice(currentIndex, 1);
+      sortedMechanics.push(movedElement);
+      
+      // Renumber all layers sequentially
+      const layerMap = new Map<string, number>();
+      sortedMechanics.forEach((mech, index) => {
+        layerMap.set(mech.id, index + 1);
+      });
+      
+      // Apply new layer numbers to all mechanics
+      return prevMechanics.map(m => ({
+        ...m,
+        layer: layerMap.get(m.id) || m.layer
+      }));
+    });
     setMechanicsChanged(true);
   };
 
@@ -1086,15 +1140,9 @@ export default function AssetEditorPage() {
     return /^#([0-9A-F]{3}){1,2}$/i.test(color);
   };
 
+  // Show nothing while loading (global loader is visible)
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#09090b' }}>
-        <CircularLoader 
-          size={120}
-          message="Loading presentation..."
-        />
-      </div>
-    );
+    return null;
   }
 
   if (!asset) {
@@ -1967,6 +2015,8 @@ export default function AssetEditorPage() {
                   }
                 }}
                 onMoveLayer={handleMoveLayer}
+                onSendToFront={handleSendToFront}
+                onSendToBack={handleSendToBack}
               />
               </div>
             </div>
@@ -2455,7 +2505,7 @@ export default function AssetEditorPage() {
               })()}
 
                     {/* Custom Array Editors for Complex Components */}
-                    {(selectedMechanic.type === 'tabs' || selectedMechanic.type === 'accordion' || selectedMechanic.type === 'gridlayout' || selectedMechanic.type === 'logogrid') && (
+                    {(selectedMechanic.type === 'tabs' || selectedMechanic.type === 'accordion' || selectedMechanic.type === 'gridlayout' || selectedMechanic.type === 'logogrid' || selectedMechanic.type === 'avatarcard') && (
                       <div className="pt-4 mt-4 border-t border-zinc-800">
                         <button
                           onClick={() => {
@@ -2463,14 +2513,15 @@ export default function AssetEditorPage() {
                             else if (selectedMechanic.type === 'accordion') setEditingAccordion(selectedMechanic.id);
                             else if (selectedMechanic.type === 'gridlayout') setEditingGrid(selectedMechanic.id);
                             else if (selectedMechanic.type === 'logogrid') setEditingLogoGrid(selectedMechanic.id);
+                            else if (selectedMechanic.type === 'avatarcard') setEditingAvatarCard(selectedMechanic.id);
                           }}
                           className="w-full px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-medium"
                         >
                           <Settings className="w-4 h-4" />
-                          Edit {selectedMechanic.type === 'tabs' ? 'Tabs' : selectedMechanic.type === 'accordion' ? 'Accordion' : selectedMechanic.type === 'gridlayout' ? 'Grid Layout' : 'Logo Grid'}
+                          Edit {selectedMechanic.type === 'tabs' ? 'Tabs' : selectedMechanic.type === 'accordion' ? 'Accordion' : selectedMechanic.type === 'gridlayout' ? 'Grid Layout' : selectedMechanic.type === 'logogrid' ? 'Logo Grid' : 'Avatar Card'}
                         </button>
                         <p className="text-xs text-zinc-500 mt-2 text-center">
-                          Opens a dedicated editor for managing {selectedMechanic.type === 'tabs' ? 'tab' : selectedMechanic.type === 'accordion' ? 'accordion' : selectedMechanic.type === 'gridlayout' ? 'grid' : 'logo'} items
+                          Opens a dedicated editor for managing {selectedMechanic.type === 'tabs' ? 'tab' : selectedMechanic.type === 'accordion' ? 'accordion' : selectedMechanic.type === 'gridlayout' ? 'grid' : selectedMechanic.type === 'logogrid' ? 'logo' : 'avatar card'} properties
                         </p>
                       </div>
                     )}
@@ -2798,6 +2849,29 @@ export default function AssetEditorPage() {
             setEditingLogoGrid(null);
           }}
           onClose={() => setEditingLogoGrid(null)}
+        />
+      )}
+
+      {editingAvatarCard && selectedMechanic && selectedMechanic.type === 'avatarcard' && (
+        <AvatarCardEditor
+          imageUrl={selectedMechanic.props.imageUrl || ''}
+          name={selectedMechanic.props.name || 'Team Member'}
+          title={selectedMechanic.props.title || 'Position'}
+          bio={selectedMechanic.props.bio || ''}
+          email={selectedMechanic.props.email || ''}
+          linkedin={selectedMechanic.props.linkedin || ''}
+          twitter={selectedMechanic.props.twitter || ''}
+          github={selectedMechanic.props.github || ''}
+          layout={selectedMechanic.props.layout || 'vertical'}
+          backgroundColor={selectedMechanic.props.backgroundColor || '#18181b'}
+          textColor={selectedMechanic.props.textColor || '#ffffff'}
+          onSave={(data) => {
+            Object.entries(data).forEach(([key, value]) => {
+              handleMechanicPropChange(key, value);
+            });
+            setEditingAvatarCard(null);
+          }}
+          onClose={() => setEditingAvatarCard(null)}
         />
       )}
 

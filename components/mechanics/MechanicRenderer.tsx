@@ -92,13 +92,13 @@ export function MechanicRenderer({
       case 'videoplayer':
         return <VideoPlayer {...enhancedProps as any} />
       case 'imagegallery':
-        return <ImageGallery {...enhancedProps as any} images={props.images ? JSON.parse(props.images) : []} />
+        return <ImageGallery {...enhancedProps as any} images={Array.isArray(props.images) ? props.images : (typeof props.images === 'string' ? JSON.parse(props.images) : [])} />
       case 'imagecomparison':
         return <ImageComparison {...enhancedProps as any} />
       case 'iconlibrary':
         return <IconLibrary {...enhancedProps as any} />
       case 'logogrid':
-        return <LogoGrid {...enhancedProps as any} logos={props.logos ? JSON.parse(props.logos) : []} />
+        return <LogoGrid {...enhancedProps as any} logos={Array.isArray(props.logos) ? props.logos : (typeof props.logos === 'string' ? JSON.parse(props.logos) : [])} />
       case 'avatarcard':
         return <AvatarCard {...enhancedProps as any} />
       
