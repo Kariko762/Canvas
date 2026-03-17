@@ -85,7 +85,8 @@ export function Menu({
           [isRight ? 'right' : 'left']: 0,
           width,
           backgroundColor,
-          color: textColor
+          color: textColor,
+          opacity: expandedVertical ? 1 : 0.7
         }}
         onMouseEnter={() => setExpandedVertical(true)}
         onMouseLeave={() => setExpandedVertical(false)}
@@ -131,6 +132,17 @@ export function Menu({
               ))}
             </div>
           )}
+        </div>
+
+        {/* Exit Button */}
+        <div className="border-t border-white/10 p-2">
+          <a
+            href="/admin/dashboard"
+            className="flex items-center gap-3 px-3 py-3 rounded hover:bg-white/10 transition-colors"
+          >
+            <X className="w-4 h-4 flex-shrink-0" />
+            {expandedVertical && <span className="text-sm font-medium">Exit</span>}
+          </a>
         </div>
       </div>
     );
@@ -231,6 +243,17 @@ export function Menu({
                     </div>
                   </div>
                 )}
+
+                {/* Exit Button */}
+                <div className="border-t border-white/10 pt-6 mt-6">
+                  <a
+                    href="/admin/dashboard"
+                    className="flex items-center gap-3 px-4 py-3 rounded hover:bg-white/10 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                    <span className="font-medium">Exit to Dashboard</span>
+                  </a>
+                </div>
               </div>
             </div>
           </>
@@ -241,18 +264,32 @@ export function Menu({
 
   // FULLSCREEN SPLIT MENU
   if (menuType === 'fullscreen-split') {
+    const getButtonPosition = () => {
+      switch (position) {
+        case 'top':
+          return { top: '16px', left: '50%', transform: 'translateX(-50%)' };
+        case 'bottom':
+          return { bottom: '16px', left: '50%', transform: 'translateX(-50%)' };
+        case 'left':
+          return { top: '16px', left: '16px' };
+        case 'right':
+          return { bottom: '16px', right: '16px' };
+        default:
+          return { top: '16px', left: '16px' };
+      }
+    };
+
     return (
       <>
-        {/* Menu Button - Fixed Position */}
+        {/* Menu Toggle Button */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`fixed z-50 p-4 transition-colors ${
-            position === 'top' ? 'top-4 right-4' :
-            position === 'bottom' ? 'bottom-4 right-4' :
-            position === 'left' ? 'top-4 left-4' :
-            'top-4 right-4'
-          }`}
-          style={{ color: textColor }}
+          className="fixed z-50 p-4 rounded-lg shadow-lg transition-all duration-200 hover:scale-105"
+          style={{
+            ...getButtonPosition(),
+            backgroundColor: isOpen ? accentColor : backgroundColor,
+            color: textColor
+          }}
           aria-label="Toggle menu"
         >
           {isOpen ? <X className="w-6 h-6" /> : <MenuIcon className="w-6 h-6" />}
@@ -302,6 +339,17 @@ export function Menu({
                     </a>
                   ))}
                 </div>
+              </div>
+              
+              {/* Exit Button */}
+              <div className="border-t border-white/10 p-8">
+                <a
+                  href="/admin/dashboard"
+                  className="flex items-center gap-3 p-6 rounded-lg hover:bg-white/5 transition-all duration-200"
+                >
+                  <X className="w-5 h-5" style={{ color: textColor }} />
+                  <span className="text-xl font-semibold" style={{ color: textColor }}>Exit to Dashboard</span>
+                </a>
               </div>
             </div>
 

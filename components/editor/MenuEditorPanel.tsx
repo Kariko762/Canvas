@@ -158,37 +158,47 @@ export function MenuEditorPanel({
             </p>
           </div>
 
-          {/* Position - Only for burger and vertical-expanding */}
-          {config.menuType !== 'fullscreen-split' && (
-            <div>
-              <label className="block text-sm font-medium mb-2">Position</label>
-              <select
-                value={config.position}
-                onChange={(e) => updateConfig({ position: e.target.value as any })}
-                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white"
-              >
-                {config.menuType === 'vertical-expanding' ? (
-                  <>
-                    <option value="left">Left</option>
-                    <option value="right">Right</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="top">Top</option>
-                    <option value="bottom">Bottom</option>
-                    <option value="left">Left</option>
-                    <option value="right">Right</option>
-                  </>
-                )}
-              </select>
-              {config.menuType === 'vertical-expanding' && (
-                <p className="text-xs text-zinc-500 mt-1">Side where sidebar appears</p>
+          {/* Position */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              {config.menuType === 'fullscreen-split' ? 'Button Position' : 'Position'}
+            </label>
+            <select
+              value={config.position}
+              onChange={(e) => updateConfig({ position: e.target.value as any })}
+              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded focus:border-blue-600 focus:outline-none text-white"
+            >
+              {config.menuType === 'vertical-expanding' ? (
+                <>
+                  <option value="left">Left</option>
+                  <option value="right">Right</option>
+                </>
+              ) : config.menuType === 'fullscreen-split' ? (
+                <>
+                  <option value="top">Top Center</option>
+                  <option value="bottom">Bottom Center</option>
+                  <option value="left">Top Left</option>
+                  <option value="right">Bottom Right</option>
+                </>
+              ) : (
+                <>
+                  <option value="top">Top</option>
+                  <option value="bottom">Bottom</option>
+                  <option value="left">Left</option>
+                  <option value="right">Right</option>
+                </>
               )}
-              {config.menuType === 'burger' && (
-                <p className="text-xs text-zinc-500 mt-1">Where burger button appears</p>
-              )}
-            </div>
-          )}
+            </select>
+            {config.menuType === 'vertical-expanding' && (
+              <p className="text-xs text-zinc-500 mt-1">Side where sidebar appears</p>
+            )}
+            {config.menuType === 'burger' && (
+              <p className="text-xs text-zinc-500 mt-1">Where burger button appears</p>
+            )}
+            {config.menuType === 'fullscreen-split' && (
+              <p className="text-xs text-zinc-500 mt-1">Avoids top-right to not cover fullscreen button</p>
+            )}
+          </div>
 
           {/* Animation - Only for burger and vertical-expanding */}
           {config.menuType !== 'fullscreen-split' && (
