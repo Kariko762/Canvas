@@ -531,9 +531,9 @@ export async function deleteModal(id: string): Promise<boolean> {
 export function getDefaultMenuConfig(): MenuConfig {
   return {
     enabled: true,
-    menuType: 'burger',
-    position: 'top',
-    animation: 'slide-down',
+    menuType: 'vertical-expanding',
+    position: 'left',
+    animation: 'slide-out',
     backgroundColor: '#1a1a1a',
     textColor: '#ffffff',
     accentColor: '#3b82f6',

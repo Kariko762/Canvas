@@ -79,24 +79,38 @@ export function Menu({
     const width = expandedVertical ? '280px' : '64px';
 
     return (
-      <div
-        className="fixed z-50 flex flex-col transition-all duration-300 shadow-lg"
-        style={{
-          top: 0,
-          bottom: 0,
-          [isRight ? 'right' : 'left']: 0,
-          width,
-          backgroundColor,
-          color: textColor,
-          opacity: expandedVertical ? 1 : 0.7
-        }}
-        onMouseEnter={() => setExpandedVertical(true)}
-        onMouseLeave={() => setExpandedVertical(false)}
-      >
-        {/* Header */}
-        <div className="h-16 flex items-center justify-center border-b border-white/10">
+      <>
+        {/* Fixed burger icon - position based on menu position */}
+        <div
+          className="fixed z-[60] p-2 rounded-lg shadow-lg transition-colors cursor-pointer"
+          style={{
+            top: '12px',
+            [isRight ? 'right' : 'left']: '12px',
+            backgroundColor,
+            color: textColor
+          }}
+          onMouseEnter={() => setExpandedVertical(true)}
+        >
           <MenuIcon className="w-6 h-6" />
         </div>
+
+        {/* Sliding panel */}
+        <div
+          className="fixed z-50 flex flex-col transition-all duration-300 shadow-lg"
+          style={{
+            top: 0,
+            bottom: 0,
+            [isRight ? 'right' : 'left']: 0,
+            width,
+            backgroundColor,
+            color: textColor,
+            opacity: expandedVertical ? 1 : 0.7
+          }}
+          onMouseEnter={() => setExpandedVertical(true)}
+          onMouseLeave={() => setExpandedVertical(false)}
+        >
+          {/* Header spacer (no icon here anymore) */}
+          <div className="h-16 border-b border-white/10" />
 
         {/* Pages Section */}
         <div className="flex-1 overflow-y-auto">
@@ -146,7 +160,8 @@ export function Menu({
             {expandedVertical && <span className="text-sm font-medium">Exit</span>}
           </a>
         </div>
-      </div>
+        </div>
+      </>
     );
   }
 

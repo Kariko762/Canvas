@@ -1215,8 +1215,27 @@ export default function AssetEditorPage() {
       const data = await res.json();
       const page = data.page;
       
-      const loadedMechanics = page.mechanics ? JSON.parse(page.mechanics) : [];
-      setMenuPreviewMechanics(loadedMechanics);
+      // Parse and migrate mechanics like in handlePageSelect
+      if (page.mechanics) {
+        const parsed = JSON.parse(page.mechanics);
+        const migratedMechanics = Array.isArray(parsed) 
+          ? parsed.map((m: any, index: number) => {
+              const mechDef = getMechanic(m.type);
+              return {
+                ...m,
+                name: m.name || `${mechDef?.name || 'Object'} ${m.id.slice(0, 4)}`,
+                x: m.x ?? 100 + (index * 20),
+                y: m.y ?? 100 + (index * 20),
+                layer: m.layer ?? index + 1,
+                width: m.width ?? 200,
+                height: m.height ?? 100
+              };
+            })
+          : [];
+        setMenuPreviewMechanics(migratedMechanics);
+      } else {
+        setMenuPreviewMechanics([]);
+      }
     } catch (err) {
       console.error('Failed to load preview page:', err);
       setMenuPreviewMechanics([]);
@@ -2108,24 +2127,30 @@ export default function AssetEditorPage() {
                     }}
                   >
                     {/* Render page mechanics */}
-                    {menuPreviewMechanics.map((mechanic) => (
-                      <div
-                        key={mechanic.id}
-                        style={{
-                          position: 'absolute',
-                          left: `${mechanic.x}px`,
-                          top: `${mechanic.y}px`,
-                          width: mechanic.width ? `${mechanic.width}px` : 'auto',
-                          height: mechanic.height ? `${mechanic.height}px` : 'auto',
-                          zIndex: mechanic.layer || 1
-                        }}
-                      >
-                        <MechanicRenderer
-                          mechanic={mechanic}
-                          mode="view"
-                        />
-                      </div>
-                    ))}
+                    {(() => {
+                      const maxLayer = Math.max(...menuPreviewMechanics.map(m => m.layer || 1), 1);
+                      return menuPreviewMechanics.map((mechanic) => {
+                        const zIndex = maxLayer - (mechanic.layer || 1) + 1; // Invert: layer 1 = highest z-index
+                        return (
+                          <div
+                            key={mechanic.id}
+                            style={{
+                              position: 'absolute',
+                              left: `${mechanic.x}px`,
+                              top: `${mechanic.y}px`,
+                              width: mechanic.width ? `${mechanic.width}px` : 'auto',
+                              height: mechanic.height ? `${mechanic.height}px` : 'auto',
+                              zIndex: zIndex
+                            }}
+                          >
+                            <MechanicRenderer
+                              mechanic={mechanic}
+                              mode="view"
+                            />
+                          </div>
+                        );
+                      });
+                    })()}
 
                     {/* Menu overlaid on top */}
                     <Menu

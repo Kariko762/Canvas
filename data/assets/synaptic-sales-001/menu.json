@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "menuType": "vertical-expanding",
+  "position": "top",
+  "animation": "slide-down",
+  "backgroundColor": "#1a1a1a",
+  "textColor": "#ffffff",
+  "accentColor": "#3b82f6",
+  "rightPanelItems": []
+}
