@@ -80,8 +80,10 @@ export function Menu({
 
     return (
       <div
-        className="fixed top-0 h-screen z-50 flex flex-col transition-all duration-300 shadow-lg"
+        className="fixed z-50 flex flex-col transition-all duration-300 shadow-lg"
         style={{
+          top: 0,
+          bottom: 0,
           [isRight ? 'right' : 'left']: 0,
           width,
           backgroundColor,
@@ -281,19 +283,21 @@ export function Menu({
 
     return (
       <>
-        {/* Menu Toggle Button */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="fixed z-50 p-4 rounded-lg shadow-lg transition-all duration-200 hover:scale-105"
-          style={{
-            ...getButtonPosition(),
-            backgroundColor: isOpen ? accentColor : backgroundColor,
-            color: textColor
-          }}
-          aria-label="Toggle menu"
-        >
-          {isOpen ? <X className="w-6 h-6" /> : <MenuIcon className="w-6 h-6" />}
-        </button>
+        {/* Menu Open Button - Only shown when closed */}
+        {!isOpen && (
+          <button
+            onClick={() => setIsOpen(true)}
+            className="fixed z-50 p-4 rounded-lg shadow-lg transition-all duration-200 hover:scale-105"
+            style={{
+              ...getButtonPosition(),
+              backgroundColor,
+              color: textColor
+            }}
+            aria-label="Open menu"
+          >
+            <MenuIcon className="w-6 h-6" />
+          </button>
+        )}
 
         {/* Fullscreen Menu */}
         {isOpen && (
@@ -303,6 +307,19 @@ export function Menu({
             }`}
             style={{ backgroundColor }}
           >
+            {/* Close Button - Fixed top-right */}
+            <button
+              onClick={() => setIsOpen(false)}
+              className="fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-200 hover:scale-105"
+              style={{
+                backgroundColor: accentColor,
+                color: textColor
+              }}
+              aria-label="Close menu"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
             {/* Left Panel - Auto-generated Pages */}
             <div className="w-1/2 border-r border-white/10 flex flex-col">
               <div className="p-8 border-b border-white/10">
